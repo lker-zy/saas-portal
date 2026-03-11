@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import StaticResidentialPurchase from './components/StaticResidentialPurchase';
 import RegisterPage from './components/RegisterPage';
+import LoginPage from './components/LoginPage';
 import StaticISPPage from './components/StaticISPPage';
 import SolutionsPage from './components/SolutionsPage';
 import CompanyPage from './components/CompanyPage';
@@ -52,6 +53,19 @@ if (pathname === '/register') {
   root.render(
     <React.StrictMode>
       <RegisterPage />
+    </React.StrictMode>
+  );
+}
+
+// ───── Route: /login or /#login ─────
+const hash = window.location.hash;
+if (pathname === '/login' || hash === '#login') {
+  hideMainApp();
+  const mountEl = getMountPoint('login-root');
+  const root = ReactDOM.createRoot(mountEl);
+  root.render(
+    <React.StrictMode>
+      <LoginPage />
     </React.StrictMode>
   );
 }

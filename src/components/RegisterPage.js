@@ -119,6 +119,13 @@ function RegisterPage() {
       });
       const data = await resp.json();
       if (!resp.ok) throw new Error(data.message || data.error || '发送失败');
+
+      // 测试模式：自动填充验证码
+      if (data.data?.code) {
+        setVerificationCode(data.data.code);
+        console.log('[测试模式] 验证码已自动填充:', data.data.code);
+      }
+
       // Start countdown
       setCountdown(60);
       timerRef.current && clearInterval(timerRef.current);

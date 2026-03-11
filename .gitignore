@@ -9,6 +9,10 @@
 # production
 /build
 
+# pre-built assets in public directory
+/public/assets/index-*.js
+/public/assets/index-*.css
+
 # misc
 .DS_Store
 .env.local

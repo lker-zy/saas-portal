@@ -1,15 +1,12 @@
 const { createProxyMiddleware } = require('http-proxy-middleware');
 
 module.exports = function (app) {
-  // Client API 代理
+  // Client API 代理 - 必须放在 /api 之前
   app.use(
-    '/client',
+    '/api/client',
     createProxyMiddleware({
-      target: 'http://127.0.0.1:8081',
+      target: 'http://127.0.0.1:8081/client',
       changeOrigin: true,
-      pathRewrite: {
-        '^/client': '/client',
-      },
       onProxyReq: (proxyReq, req, res) => {
         console.log('[Proxy] Client API:', req.method, req.url, '→ http://127.0.0.1:8081');
       },
@@ -23,7 +20,7 @@ module.exports = function (app) {
     })
   );
 
-  // 其他 API 代理（如 /api/order, /api/template 等）
+  // 其他 API 代理
   app.use(
     '/api',
     createProxyMiddleware({

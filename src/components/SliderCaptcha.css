@@ -1,0 +1,283 @@
+/* ========== 拼图验证码 - Popup 样式 ========== */
+
+/* ── Wrapper: relative anchor for popup ── */
+.puzzle-captcha-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+/* ── Checkbox-style trigger bar ── */
+.puzzle-captcha-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  height: 46px;
+  padding: 0 16px;
+  background: #f9fafb;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 0.25s, box-shadow 0.25s, background 0.25s;
+}
+.puzzle-captcha-bar:hover {
+  border-color: #bdbdbd;
+  background: #f3f4f6;
+}
+.puzzle-captcha-bar.active {
+  border-color: #1A73E8;
+  box-shadow: 0 0 0 3px rgba(26,115,232,0.12);
+}
+.puzzle-captcha-bar.verified {
+  border-color: #22c55e;
+  background: #f0fdf4;
+  cursor: default;
+}
+
+/* ── Checkbox icon ── */
+.puzzle-captcha-checkbox {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  border: 2px solid #d1d5db;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s;
+  background: #fff;
+}
+.puzzle-captcha-bar:hover .puzzle-captcha-checkbox {
+  border-color: #9ca3af;
+}
+.puzzle-captcha-checkbox.verified {
+  background: #22c55e;
+  border-color: #22c55e;
+}
+
+/* ── Bar text ── */
+.puzzle-captcha-bar-text {
+  font-size: 14px;
+  color: #4b5563;
+  flex: 1;
+}
+.puzzle-captcha-bar.verified .puzzle-captcha-bar-text {
+  color: #16a34a;
+  font-weight: 500;
+}
+
+/* ── Bar checkmark icon ── */
+.puzzle-captcha-bar-check {
+  margin-left: auto;
+}
+
+/* ── Floating popup ── */
+.puzzle-captcha-popup {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 300px;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.06);
+  z-index: 1000;
+  overflow: hidden;
+  animation: popupFadeIn 0.25s ease-out;
+}
+
+/* popup arrow */
+.puzzle-captcha-popup::after {
+  content: '';
+  position: absolute;
+  bottom: -7px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  border-right: 1px solid #e0e0e0;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+@keyframes popupFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* ── Popup header ── */
+.puzzle-captcha-popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid #f0f0f0;
+  background: #fafafa;
+}
+.puzzle-captcha-popup-header span {
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+}
+
+/* ── Close button ── */
+.puzzle-captcha-close {
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  transition: background 0.15s, color 0.15s;
+}
+.puzzle-captcha-close:hover {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+/* ── Image wrapper ── */
+.puzzle-captcha-img-wrap {
+  position: relative;
+  width: 100%;
+  line-height: 0;
+  background: #e5e7eb;
+}
+
+/* ── Refresh button ── */
+.puzzle-captcha-refresh {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0,0,0,0.35);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, transform 0.35s;
+  z-index: 5;
+}
+.puzzle-captcha-refresh:hover {
+  background: rgba(0,0,0,0.55);
+  transform: rotate(180deg);
+}
+
+/* ── Success / fail overlay ── */
+.puzzle-captcha-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 4;
+  animation: pcOverlayIn 0.3s ease;
+}
+.puzzle-captcha-overlay.success { background: rgba(34,197,94,0.3); }
+.puzzle-captcha-overlay.fail    { background: rgba(239,68,68,0.3); }
+@keyframes pcOverlayIn { from { opacity:0 } to { opacity:1 } }
+
+/* ── Slider track (inside popup) ── */
+.puzzle-slider-track {
+  position: relative;
+  width: 100%;
+  height: 40px;
+  background: #f3f4f6;
+  border-top: 1px solid #e5e7eb;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
+  transition: background 0.2s;
+}
+.puzzle-slider-track.dragging { background: #eff6ff; }
+.puzzle-slider-track.verified { background: #f0fdf4; border-top-color: #bbf7d0; }
+.puzzle-slider-track.failed   { background: #fef2f2; border-top-color: #fecaca; }
+
+.puzzle-slider-fill {
+  position: absolute;
+  top: 0; left: 0;
+  height: 100%;
+  background: rgba(26,115,232,0.08);
+  pointer-events: none;
+}
+.puzzle-slider-track.verified .puzzle-slider-fill { background: rgba(34,197,94,0.12); }
+.puzzle-slider-track.failed   .puzzle-slider-fill { background: rgba(239,68,68,0.1); }
+
+.puzzle-slider-text {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+  font-size: 12px;
+  color: #9ca3af;
+  white-space: nowrap;
+  pointer-events: none;
+  transition: color 0.2s;
+}
+.puzzle-slider-track.verified .puzzle-slider-text { color: #22c55e; font-weight: 500; }
+.puzzle-slider-track.failed   .puzzle-slider-text { color: #ef4444; font-weight: 500; }
+
+.puzzle-slider-handle {
+  position: absolute;
+  top: 2px;
+  width: 36px;
+  height: 36px;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  transition: box-shadow 0.2s, border-color 0.2s, background 0.2s;
+  z-index: 10;
+  touch-action: none;
+}
+.puzzle-slider-handle:hover {
+  box-shadow: 0 2px 8px rgba(26,115,232,0.18);
+  border-color: #1A73E8;
+}
+.puzzle-slider-handle:active { cursor: grabbing; }
+.puzzle-slider-handle.verified {
+  background: #22c55e;
+  border-color: #22c55e;
+  cursor: default;
+  box-shadow: 0 2px 8px rgba(34,197,94,0.3);
+}
+.puzzle-slider-handle.failed {
+  background: #ef4444;
+  border-color: #ef4444;
+  cursor: default;
+  box-shadow: 0 2px 8px rgba(239,68,68,0.3);
+}
+
+/* ── Popup footer ── */
+.puzzle-captcha-popup-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 14px;
+  border-top: 1px solid #f0f0f0;
+  background: #fafafa;
+}
+.puzzle-captcha-popup-footer span {
+  font-size: 11px;
+  color: #9ca3af;
+}
+

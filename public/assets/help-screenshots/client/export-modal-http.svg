@@ -1,0 +1,139 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
+  <defs>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    </style>
+  </defs>
+  
+  <!-- Background overlay -->
+  <rect width="1200" height="800" fill="#000" opacity="0.5"/>
+  
+  <!-- Modal -->
+  <rect x="150" y="40" width="900" height="720" rx="16" fill="white"/>
+  
+  <!-- Modal header -->
+  <text x="200" y="80" fill="#111827" font-size="18" font-weight="bold">鎵归噺鏌ョ湅 / 瀵煎嚭</text>
+  <text x="1010" y="80" fill="#6b7280" font-size="20" font-weight="300">鉁?/text>
+  
+  <!-- Protocol tabs -->
+  <rect x="200" y="100" width="80" height="36" rx="8" fill="#2563eb"/>
+  <text x="240" y="123" fill="white" font-size="13" font-weight="600" text-anchor="middle">HTTP</text>
+  
+  <rect x="290" y="100" width="80" height="36" rx="8" fill="#f1f5f9"/>
+  <text x="330" y="123" fill="#6b7280" font-size="13" text-anchor="middle">SOCKS5</text>
+  
+  <rect x="380" y="100" width="80" height="36" rx="8" fill="#f1f5f9"/>
+  <text x="420" y="123" fill="#6b7280" font-size="13" text-anchor="middle">VLESS</text>
+  
+  <rect x="470" y="100" width="100" height="36" rx="8" fill="#f1f5f9"/>
+  <text x="520" y="123" fill="#6b7280" font-size="13" text-anchor="middle">Shadowsocks</text>
+  
+  <rect x="580" y="100" width="80" height="36" rx="8" fill="#f1f5f9"/>
+  <text x="620" y="123" fill="#6b7280" font-size="13" text-anchor="middle">Trojan</text>
+  
+  <rect x="670" y="100" width="90" height="36" rx="8" fill="#f1f5f9"/>
+  <text x="715" y="123" fill="#6b7280" font-size="13" text-anchor="middle">Hysteria2</text>
+  
+  <!-- Red highlight on HTTP tab -->
+  <rect x="195" y="95" width="90" height="46" rx="10" stroke="#ef4444" stroke-width="3" fill="none"/>
+  
+  <!-- Left panel: View mode -->
+  <text x="200" y="170" fill="#111827" font-size="13" font-weight="600">馃搵 鏌ョ湅妯″紡</text>
+  
+  <!-- List text mode - active -->
+  <rect x="200" y="180" width="200" height="36" rx="8" fill="#eff6ff" stroke="#2563eb"/>
+  <text x="220" y="203" fill="#2563eb" font-size="12" font-weight="600">馃摑 鍒楄〃鏂囨湰</text>
+  
+  <rect x="200" y="224" width="200" height="36" rx="8" fill="#f8fafc" stroke="#e5e7eb"/>
+  <text x="220" y="247" fill="#6b7280" font-size="12">馃敆 鏍囧噯 URL</text>
+  
+  <rect x="200" y="268" width="200" height="36" rx="8" fill="#f8fafc" stroke="#e5e7eb"/>
+  <text x="220" y="291" fill="#6b7280" font-size="12">鈿?Clash</text>
+  
+  <rect x="200" y="312" width="200" height="36" rx="8" fill="#f8fafc" stroke="#e5e7eb"/>
+  <text x="220" y="335" fill="#6b7280" font-size="12">馃摫 Surge</text>
+  
+  <rect x="200" y="356" width="200" height="36" rx="8" fill="#f8fafc" stroke="#e5e7eb"/>
+  <text x="220" y="379" fill="#6b7280" font-size="12">馃殌 Shadowrocket</text>
+  
+  <rect x="200" y="400" width="200" height="36" rx="8" fill="#f8fafc" stroke="#e5e7eb"/>
+  <text x="220" y="423" fill="#6b7280" font-size="12">馃摗 Quantumult X</text>
+  
+  <!-- Red highlight on 鍒楄〃鏂囨湰 -->
+  <rect x="195" y="175" width="210" height="46" rx="10" stroke="#ef4444" stroke-width="3" fill="none"/>
+  
+  <!-- Auth mode -->
+  <text x="200" y="470" fill="#111827" font-size="13" font-weight="600">馃攼 鎺堟潈鏂瑰紡</text>
+  
+  <rect x="200" y="480" width="200" height="36" rx="8" fill="#eff6ff" stroke="#2563eb"/>
+  <text x="220" y="503" fill="#2563eb" font-size="12" font-weight="600">馃攽 瀵嗙爜妯″紡</text>
+  
+  <rect x="200" y="524" width="200" height="36" rx="8" fill="#f8fafc" stroke="#e5e7eb"/>
+  <text x="220" y="547" fill="#6b7280" font-size="12">馃寪 鐧藉悕鍗曟ā寮?/text>
+  
+  <!-- Red highlight on 瀵嗙爜妯″紡 -->
+  <rect x="195" y="475" width="210" height="46" rx="10" stroke="#ef4444" stroke-width="3" fill="none"/>
+  
+  <!-- Copy format -->
+  <text x="200" y="600" fill="#111827" font-size="13" font-weight="600">馃搫 澶嶅埗鏍煎紡</text>
+  
+  <rect x="200" y="610" width="200" height="36" rx="8" fill="#eff6ff" stroke="#2563eb"/>
+  <text x="220" y="633" fill="#2563eb" font-size="12" font-weight="600">馃搵 绾枃鏈牸寮?/text>
+  
+  <rect x="200" y="654" width="200" height="36" rx="8" fill="#f8fafc" stroke="#e5e7eb"/>
+  <text x="220" y="677" fill="#6b7280" font-size="12">馃敆 URL 鏍煎紡</text>
+  
+  <!-- Red highlight on 绾枃鏈牸寮?-->
+  <rect x="195" y="605" width="210" height="46" rx="10" stroke="#ef4444" stroke-width="3" fill="none"/>
+  
+  <!-- Right panel: Proxy list -->
+  <rect x="430" y="155" width="600" height="530" rx="10" fill="#f8fafc" stroke="#e5e7eb"/>
+  
+  <text x="450" y="180" fill="#111827" font-size="13" font-weight="600">HTTP 浠ｇ悊鍒楄〃 (瀵嗙爜妯″紡 - 绾枃鏈?</text>
+  <text x="900" y="180" fill="#6b7280" font-size="11">鍏?25 鏉?/text>
+  
+  <!-- Proxy entries -->
+  <rect x="450" y="195" width="560" height="26" rx="4" fill="white" stroke="#e5e7eb"/>
+  <text x="460" y="213" fill="#374151" font-size="11" font-family="monospace">1. 154.12.88.101:8080:user_abc123:pass_xyz789</text>
+  
+  <rect x="450" y="225" width="560" height="26" rx="4" fill="#f9fafb" stroke="#e5e7eb"/>
+  <text x="460" y="243" fill="#374151" font-size="11" font-family="monospace">2. 154.12.88.102:8080:user_abc123:pass_xyz789</text>
+  
+  <rect x="450" y="255" width="560" height="26" rx="4" fill="white" stroke="#e5e7eb"/>
+  <text x="460" y="273" fill="#374151" font-size="11" font-family="monospace">3. 154.12.88.103:8080:user_abc123:pass_xyz789</text>
+  
+  <rect x="450" y="285" width="560" height="26" rx="4" fill="#f9fafb" stroke="#e5e7eb"/>
+  <text x="460" y="303" fill="#374151" font-size="11" font-family="monospace">4. 154.12.88.104:8080:user_abc123:pass_xyz789</text>
+  
+  <rect x="450" y="315" width="560" height="26" rx="4" fill="white" stroke="#e5e7eb"/>
+  <text x="460" y="333" fill="#374151" font-size="11" font-family="monospace">5. 154.12.88.105:8080:user_abc123:pass_xyz789</text>
+  
+  <rect x="450" y="345" width="560" height="26" rx="4" fill="#f9fafb" stroke="#e5e7eb"/>
+  <text x="460" y="363" fill="#374151" font-size="11" font-family="monospace">6. 154.12.88.106:8080:user_abc123:pass_xyz789</text>
+  
+  <rect x="450" y="375" width="560" height="26" rx="4" fill="white" stroke="#e5e7eb"/>
+  <text x="460" y="393" fill="#374151" font-size="11" font-family="monospace">7. 154.12.88.107:8080:user_abc123:pass_xyz789</text>
+  
+  <rect x="450" y="405" width="560" height="26" rx="4" fill="#f9fafb" stroke="#e5e7eb"/>
+  <text x="460" y="423" fill="#374151" font-size="11" font-family="monospace">8. 154.12.88.108:8080:user_abc123:pass_xyz789</text>
+  
+  <text x="460" y="460" fill="#9ca3af" font-size="11">... 鏇村浠ｇ悊 ...</text>
+  
+  <rect x="450" y="475" width="560" height="26" rx="4" fill="white" stroke="#e5e7eb"/>
+  <text x="460" y="493" fill="#374151" font-size="11" font-family="monospace">25. 154.12.88.125:8080:user_abc123:pass_xyz789</text>
+  
+  <!-- Format explanation -->
+  <rect x="450" y="520" width="560" height="50" rx="8" fill="#eff6ff" stroke="#bfdbfe"/>
+  <text x="470" y="540" fill="#1e40af" font-size="11" font-weight="600">馃搵 绾枃鏈牸寮忚鏄?/text>
+  <text x="470" y="558" fill="#3b82f6" font-size="10">鏍煎紡: IP鍦板潃:绔彛:鐢ㄦ埛鍚?瀵嗙爜 鈥?姣忚涓€鏉′唬鐞嗭紝鍙洿鎺ョ矘璐村埌娴忚鍣ㄦ壒閲忓鍏?/text>
+  
+  <!-- Bottom buttons -->
+  <rect x="450" y="700" width="180" height="40" rx="8" fill="#2563eb"/>
+  <text x="540" y="725" fill="white" font-size="13" font-weight="bold" text-anchor="middle">馃搵 涓€閿鍒?/text>
+  
+  <rect x="650" y="700" width="180" height="40" rx="8" fill="white" stroke="#e5e7eb"/>
+  <text x="740" y="725" fill="#374151" font-size="13" text-anchor="middle">馃捑 瀵煎嚭鏂囦欢</text>
+  
+  <rect x="850" y="700" width="160" height="40" rx="8" fill="white" stroke="#e5e7eb"/>
+  <text x="930" y="725" fill="#374151" font-size="13" text-anchor="middle">馃攧 鍒锋柊鍒楄〃</text>
+</svg>

@@ -1,0 +1,55 @@
+﻿/* Hide existing footer if any */
+body > footer, #root > footer, #isp-root > footer, .ant-layout-footer {
+  display: none !important;
+}
+/* Show our footer */
+footer.quantum-footer {
+  display: block !important;
+  background: #f8fafc;
+  padding: 40px 0;
+  border-top: 1px solid #e2e8f0;
+  margin-top: auto;
+  width: 100%;
+  position: relative;
+  z-index: 10;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+.quantum-footer .footer-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.quantum-footer .footer-links {
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.quantum-footer .footer-links a {
+  color: #64748b;
+  font-size: 14px;
+  text-decoration: none;
+  transition: color 0.2s;
+  font-weight: 500;
+}
+.quantum-footer .footer-links a:hover {
+  color: #1A73E8;
+}
+.quantum-footer .footer-text {
+  text-align: center;
+  color: #94a3b8;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.quantum-footer .footer-copyright {
+  margin-bottom: 2px;
+  color: #64748b;
+}
+.quantum-footer .footer-links:empty,
+.quantum-footer .footer-disclaimer:empty {
+  display: none;
+}

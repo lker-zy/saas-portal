@@ -112,7 +112,7 @@ function RegisterPage() {
 
     setIsSending(true);
     try {
-      const resp = await fetch('/client/send-code', {
+      const resp = await fetch('/client/send-verification-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),

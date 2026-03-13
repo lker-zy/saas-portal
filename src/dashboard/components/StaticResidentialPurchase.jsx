@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Globe, ShoppingCart, Share2, Database, Smartphone, Server, Wifi, 
+import {
+  Globe, ShoppingCart, Share2, Database, Smartphone, Server, Wifi,
   CheckCircle, Zap, Shield, ArrowRight, CreditCard, Box, ChevronDown, Check, Info, Minus, Plus, Monitor, Terminal,
   Bell, X, Mail, Copy, Loader2, QrCode, Wallet, HelpCircle, Lock, Tag, Sparkles, ChevronRight, Star, TrendingUp, Package,
-  UserPlus, LogIn, Eye, EyeOff, ArrowLeft, Home
+  AlertCircle, AlertTriangle
 } from 'lucide-react';
-import { REGIONS, BUSINESS_CATEGORIES, TERMINALS, SKUS, RESOURCE_POOL, DURATIONS, SUBSCRIPTION_CYCLES, ALL_PROTOCOLS, PRODUCT_CONFIG, SAVED_PAYMENT_METHODS, USER_BALANCE } from '../data/mockData';
-import SliderCaptcha from './SliderCaptcha';
+import { productService } from '../services/productService';
+import { paymentService } from '../services/paymentService';
+import { StripePaymentMethodSelector } from './StripePaymentMethodSelector';
+import { useAuth } from '../contexts/AuthContext';
+import { usePurchaseFlow } from '../hooks/usePurchaseFlow';
 
 import aliPayImg from '../assets/ali_pay.png';
 import wxPayImg from '../assets/wx_pay.png';
@@ -19,8 +22,8 @@ import amazonImg from '../assets/amazon.png';
 import ebayImg from '../assets/eboy.png';
 import shopifyImg from '../assets/shopify.png';
 import tiktokImg from '../assets/tiktok.png';
-const amexSvg = '/amex.svg';
-const discoverSvg = '/discover.svg';
+import amexSvg from '../assets/amex.svg';
+import discoverSvg from '../assets/discover.svg';
 
 // ════════════════════════════════════════════════════════════
 // Payment Brand Icons (SVG/PNG) — Card-badge style
@@ -498,83 +501,29 @@ const OrderRow = ({ label, value, muted }) => (
 // ════════════════════════════════════════════════════════════
 // MAIN COMPONENT
 // ════════════════════════════════════════════════════════════
-// Purchase Guide Data (ported from project2 OfficialPurchaseGuideSettings)
-// ════════════════════════════════════════════════════════════
-const GUIDE_SCENARIOS = [
-  { 
-    id: 'social', label: '社交媒体', icon: '📱',
-    desc: 'WhatsApp · Facebook · TikTok · Instagram',
-    children: ['WhatsApp', 'Facebook', 'Instagram', 'TikTok', 'Twitter/X', 'Telegram'],
-    recommend: { bandwidthMode: 'traffic', tag: '运营首选', color: 'indigo',
-      title: '静态住宅 ISP 代理',
-      desc: '专为社媒运营优化，提供最稳定的原生家庭宽带环境，有效降低封号风险。' }
-  },
-  { 
-    id: 'ecommerce', label: '跨境电商', icon: '🛒',
-    desc: 'Amazon · eBay · Shopee · Shopify',
-    children: ['Amazon', 'eBay', 'Shopee', 'Shopify', 'Etsy', 'Walmart'],
-    recommend: { bandwidthMode: 'traffic', tag: '店铺运营首选', color: 'blue',
-      title: '静态住宅 ISP 代理 (Premium)',
-      desc: '专为跨境电商与店铺运营打造，100%真实住宅IP环境，安全稳定。' }
-  },
-  { 
-    id: 'data', label: '数据采集', icon: '🔍',
-    desc: 'Google · Bing · 通用爬虫',
-    children: ['Google Search', 'Bing', '通用爬虫'],
-    recommend: { bandwidthMode: 'bandwidth', tag: '性价比之选', color: 'emerald',
-      title: '静态住宅 ISP 代理',
-      desc: '高并发低延迟，适合大规模数据采集场景，按带宽计费更划算。' }
-  },
-  { 
-    id: 'game', label: '网络游戏', icon: '🎮',
-    desc: 'Steam · Blizzard · 手游模拟器',
-    children: ['Steam', 'Blizzard', '手游模拟器'],
-    recommend: { bandwidthMode: 'bandwidth', tag: '低延迟首选', color: 'purple',
-      title: '静态住宅 ISP 代理',
-      desc: '独享带宽保障，超低延迟，畅享全球游戏服务。' }
-  },
-  { id: 'other', label: '其他', icon: '💼', desc: '其他使用场景',
-    recommend: { bandwidthMode: 'traffic', tag: '通用推荐', color: 'slate',
-      title: '静态住宅 ISP 代理',
-      desc: '原生住宅IP通用方案，灵活配置满足多样需求。' }
-  },
-];
+const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
+  // Auth & Purchase Flow hooks
+  const { user } = useAuth();
+  const { isProcessing, executePurchase, reset: resetPurchase } = usePurchaseFlow();
 
-const GUIDE_COUNTRIES = [
-  { id: 'us', label: '美国', flag: '🇺🇸', hot: true },
-  { id: 'gb', label: '英国', flag: '🇬🇧', hot: true },
-  { id: 'hk', label: '香港', flag: '🇭🇰', hot: true },
-  { id: 'sg', label: '新加坡', flag: '🇸🇬' },
-  { id: 'jp', label: '日本', flag: '🇯🇵' },
-  { id: 'de', label: '德国', flag: '🇩🇪' },
-  { id: 'kr', label: '韩国', flag: '🇰🇷' },
-  { id: 'tw', label: '台湾', flag: '🇹🇼' },
-  { id: 'vn', label: '越南', flag: '🇻🇳' },
-  { id: 'th', label: '泰国', flag: '🇹🇭' },
-  { id: 'br', label: '巴西', flag: '🇧🇷' },
-  { id: 'ph', label: '菲律宾', flag: '🇵🇭' },
-];
+  // Data loading state
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [dataError, setDataError] = useState(null);
+  const [regions, setRegions] = useState([]);
+  const [businessCategories, setBusinessCategories] = useState([]);
+  const [durations, setDurations] = useState([]);
+  const [subscriptionCycles, setSubscriptionCycles] = useState([]);
+  const [resourcePool, setResourcePool] = useState({});
+  const [skus, setSkus] = useState({ traffic: [], bandwidth: [] });
+  const [availableProtocols, setAvailableProtocols] = useState([]); // 可用协议列表（从SKU获取）
+  const [productConfig, setProductConfig] = useState({ stockThreshold: 50 });
+  const [savedPaymentMethods, setSavedPaymentMethods] = useState([]);
+  const [currentBalance, setCurrentBalance] = useState(null);
+  const [userBalance, setUserBalance] = useState(0);
 
-const GUIDE_DURATIONS = [
-  { id: 'short_hour', label: '< 1小时', desc: '临时使用，按量付费', icon: '⚡', mapDuration: 'd_1' },
-  { id: 'short_day', label: '< 1天', desc: '短期任务', icon: '🕐', mapDuration: 'd_1' },
-  { id: 'month', label: '1个月', desc: '月度订阅', icon: '📅', mapDuration: 'd_30' },
-  { id: 'long', label: '长期使用', desc: '稳定运营，长期独享', icon: '🏢', mapDuration: 'd_180' },
-  { id: 'unknown', label: '不清楚', desc: '先试试看', icon: '🤔', mapDuration: 'd_30' },
-];
-
-const GUIDE_STEPS = [
-  { title: '使用场景', subtitle: '您打算将代理用于什么业务？' },
-  { title: '目标地区', subtitle: '您需要哪个国家/地区的IP？' },
-  { title: '使用时长', subtitle: '您预计使用多长时间？' },
-  { title: '智能推荐', subtitle: '根据您的选择，为您推荐最优方案' },
-];
-
-// ════════════════════════════════════════════════════════════
-const StaticResidentialPurchase = () => {
   // Form State
   const [selectedRegion, setSelectedRegion] = useState(null);
-  const [viewCategory, setViewCategory] = useState(BUSINESS_CATEGORIES[0]);
+  const [viewCategory, setViewCategory] = useState(null);
   const [selectedScenarios, setSelectedScenarios] = useState([]);
 
   const scenarioIcons = {
@@ -584,12 +533,12 @@ const StaticResidentialPurchase = () => {
     tiktok_shop: tiktokImg,
   };
   const [selectedTerminal, setSelectedTerminal] = useState(null);
-  const [protocol, setProtocol] = useState('SOCKS5');
+  const [protocol, setProtocol] = useState('socks'); // 使用小写，与API返回一致
   const [quantity, setQuantity] = useState(1);
-  const [selectedDuration, setSelectedDuration] = useState(DURATIONS[0]);
+  const [selectedDuration, setSelectedDuration] = useState(null);
   const [customDurationDays, setCustomDurationDays] = useState(7);
   const [purchaseType, setPurchaseType] = useState('one_time');
-  const [selectedCycle, setSelectedCycle] = useState(SUBSCRIPTION_CYCLES[2]);
+  const [selectedCycle, setSelectedCycle] = useState(null);
   const [autoRenew, setAutoRenew] = useState(true);
   
   const [recommendation, setRecommendation] = useState(null);
@@ -601,6 +550,7 @@ const StaticResidentialPurchase = () => {
   
   // Payment state
   const [paymentMethod, setPaymentMethod] = useState('stripe');
+  const [stripePaymentMethod, setStripePaymentMethod] = useState('card'); // card, alipay, wechat
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [cardName, setCardName] = useState('');
   const [cardNumber, setCardNumber] = useState('');
@@ -615,8 +565,7 @@ const StaticResidentialPurchase = () => {
     country: ''
   });
   const [useSavedCard, setUseSavedCard] = useState(true);
-  const [selectedSavedCardId, setSelectedSavedCardId] = useState(SAVED_PAYMENT_METHODS.length > 0 ? SAVED_PAYMENT_METHODS[0].id : null);
-  const [useBalance, setUseBalance] = useState(false);
+  const [selectedSavedCardId, setSelectedSavedCardId] = useState(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [agreedTerms, setAgreedTerms] = useState(true);
   const [usdtNetwork, setUsdtNetwork] = useState('TRC20');
@@ -628,131 +577,113 @@ const StaticResidentialPurchase = () => {
   const [couponError, setCouponError] = useState('');
   const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
 
-  // Auth State
-  const [showAuthForm, setShowAuthForm] = useState(false);
-  const [authMode, setAuthMode] = useState('login'); // 'login' or 'register'
-  const [isLoggedIn, setIsLoggedIn] = useState(false); // Mock login state
-  const [authEmail, setAuthEmail] = useState('');
-  const [authPassword, setAuthPassword] = useState('');
-  const [authConfirmPassword, setAuthConfirmPassword] = useState('');
-  const [authVerifyCode, setAuthVerifyCode] = useState('');
-  const [authErrors, setAuthErrors] = useState({});
-  const [authSubmitting, setAuthSubmitting] = useState(false);
-  const [verifyCodeCountdown, setVerifyCodeCountdown] = useState(0);
-  const [justRegistered, setJustRegistered] = useState(false);
-  const [showAuthPassword, setShowAuthPassword] = useState(false);
-  const [showAuthConfirmPwd, setShowAuthConfirmPwd] = useState(false);
-  const [authPhone, setAuthPhone] = useState('');
-  const [authCountryCode, setAuthCountryCode] = useState('+86');
-  const [showAuthCodeDropdown, setShowAuthCodeDropdown] = useState(false);
-  const [authCaptchaVerified, setAuthCaptchaVerified] = useState(false);
-  const [authAgreement, setAuthAgreement] = useState(false);
-  const authFormRef = useRef(null);
-  const authDropdownRef = useRef(null);
-
-  // Purchase Guide State
-  const [showGuide, setShowGuide] = useState(false);
-  const [guideStep, setGuideStep] = useState(0);
-  const [guideScenario, setGuideScenario] = useState('');
-  const [guideCountry, setGuideCountry] = useState('');
-  const [guideDuration, setGuideDuration] = useState('');
-  const [guideAnimDir, setGuideAnimDir] = useState('next'); // 'next' | 'prev'
-
-  const openGuide = () => {
-    setGuideStep(0);
-    setGuideScenario('');
-    setGuideCountry('');
-    setGuideDuration('');
-    setGuideAnimDir('next');
-    setShowGuide(true);
-  };
-
-  const guideNext = () => {
-    setGuideAnimDir('next');
-    setGuideStep(s => Math.min(s + 1, 3));
-  };
-
-  const guidePrev = () => {
-    setGuideAnimDir('prev');
-    setGuideStep(s => Math.max(s - 1, 0));
-  };
-
-  const guideCanNext = () => {
-    if (guideStep === 0) return !!guideScenario;
-    if (guideStep === 1) return !!guideCountry;
-    if (guideStep === 2) return !!guideDuration;
-    return false;
-  };
-
-  const applyGuideResult = () => {
-    // Map scenario to viewCategory + selectedScenarios
-    const scenarioObj = GUIDE_SCENARIOS.find(s => s.id === guideScenario);
-    if (guideScenario === 'ecommerce' || guideScenario === 'social' || guideScenario === 'data') {
-      const cat = BUSINESS_CATEGORIES.find(c => c.id === guideScenario || 
-        (guideScenario === 'data' && c.id === 'scraping'));
-      if (cat) setViewCategory(cat);
+  // 支付方式图标映射（从 iconType 到 React 组件）
+  const getPaymentMethodIcon = (iconType) => {
+    switch (iconType) {
+      case 'wallet':
+        return <Wallet className="w-5 h-5 text-[#10B981]" />;
+      case 'card':
+        return <WalletCardIcon size="icon" />;
+      case 'usdt':
+        return <UsdtIcon size="icon" />;
+      default:
+        return <Wallet className="w-5 h-5" />;
     }
-
-    // Map country to region
-    const region = REGIONS.find(r => r.id === guideCountry);
-    if (region) setSelectedRegion(region);
-
-    // Map duration
-    const durObj = GUIDE_DURATIONS.find(d => d.id === guideDuration);
-    if (durObj) {
-      const dur = DURATIONS.find(d => d.id === durObj.mapDuration);
-      if (dur) setSelectedDuration(dur);
-    }
-
-    // Map bandwidth mode
-    if (scenarioObj?.recommend?.bandwidthMode) {
-      setBandwidthMode(scenarioObj.recommend.bandwidthMode);
-      setUserOverrideMode(true);
-    }
-
-    // Set recommended quantity
-    if (guideDuration === 'long') setQuantity(5);
-    else if (guideDuration === 'month') setQuantity(3);
-    else setQuantity(1);
-
-    setShowGuide(false);
   };
 
-  const PAYMENT_METHODS = [
-    { id: 'stripe', name: '银行卡', icon: <WalletCardIcon size="icon" />, brandColor: '#1A73E8', bgActive: 'border-blue-400 bg-blue-50/50 ring-2 ring-blue-100' },
-    { id: 'wechat', name: '微信支付', icon: <WeChatIcon size="icon" />, brandColor: '#07C160', bgActive: 'border-green-400 bg-green-50/50 ring-2 ring-green-100' },
-    { id: 'alipay', name: '支付宝', icon: <AlipayIcon size="icon" />, brandColor: '#1677FF', bgActive: 'border-blue-400 bg-blue-50/50 ring-2 ring-blue-100' },
-    { id: 'usdt', name: 'USDT', icon: <UsdtIcon size="icon" />, brandColor: '#26A17B', bgActive: 'border-emerald-400 bg-emerald-50/50 ring-2 ring-emerald-100' },
-  ];
+  // 获取带图标的支付方式列表
+  const PAYMENT_METHODS = paymentService.getPaymentMethods().map(method => ({
+    ...method,
+    icon: getPaymentMethodIcon(method.iconType)
+  }));
 
-  // Stock check
+  // Stock check - 使用 productService 封装的方法
   const getStockStatus = (region) => {
     if (!region) return null;
-    const pool = RESOURCE_POOL[region.id];
+    const pool = resourcePool[region.id];
     if (!pool) return { label: region.stock || '未知', color: 'text-gray-400', bg: 'bg-gray-50' };
-    if (pool.available <= 0) return { label: '缺货', color: 'text-red-500', bg: 'bg-red-50', isOutOfStock: true };
-    if (pool.available <= (PRODUCT_CONFIG.stockThreshold || 50)) return { label: `仅剩 ${pool.available}`, color: 'text-amber-600', bg: 'bg-amber-50', isLowStock: true };
-    return { label: '充足', color: 'text-emerald-600', bg: 'bg-emerald-50' };
+    return productService.getStockStatus(pool.available, productConfig.stockThreshold || 50);
   };
 
   const stockStatus = getStockStatus(selectedRegion);
   const isOutOfStock = stockStatus?.isOutOfStock || false;
 
-  // Notify language switcher when component is mounted
+  // Load product data on mount
   useEffect(() => {
-    // Trigger custom event to notify language switcher script
-    const event = new CustomEvent('purchase-page-mounted', { detail: { anchorId: 'isp-lang-anchor' } });
-    window.dispatchEvent(event);
-    
-    // Also try to trigger language switcher directly after a short delay
-    setTimeout(() => {
-      const anchor = document.getElementById('isp-lang-anchor');
-      if (anchor) {
-        const insertEvent = new CustomEvent('lang-switcher-insert', { detail: { anchorId: 'isp-lang-anchor' } });
-        window.dispatchEvent(insertEvent);
+    const loadProductData = async () => {
+      setIsLoadingData(true);
+      setDataError(null);
+
+      try {
+        // 使用 productService 批量加载产品数据
+        const result = await productService.loadProductCatalog();
+
+        if (!result.success) {
+          throw new Error(result.message || 'Failed to load product data');
+        }
+
+        const { regions, scenarios, durations, resourcePool } = result.data;
+
+        // 设置数据
+        setRegions(regions);
+        setResourcePool(resourcePool);
+
+        // 设置业务类别
+        setBusinessCategories(scenarios);
+        if (!viewCategory && scenarios.length > 0) {
+          setViewCategory(scenarios[0]);
+        }
+
+        // 设置时长选项
+        setDurations(durations);
+        if (!selectedDuration && durations.length > 0) {
+          setSelectedDuration(durations[0]);
+        }
+
+      } catch (error) {
+        console.error('Error loading product data:', error);
+        setDataError(error.message);
+      } finally {
+        setIsLoadingData(false);
       }
-    }, 100);
+    };
+
+    loadProductData();
   }, []);
+
+  // Load SKUs when region and scenario change
+  useEffect(() => {
+    const loadSKUs = async () => {
+      if (!selectedRegion || selectedScenarios.length === 0) return;
+
+      const scenario = selectedScenarios[0]?.id;
+      if (!scenario) return;
+
+      try {
+        // 使用 productService 的 loadSKUData 方法
+        const result = await productService.loadSKUData(selectedRegion.code, scenario);
+
+        if (result.success) {
+          const { skus, protocols } = result.data;
+
+          // 设置SKU数据
+          setSkus(skus);
+
+          // 设置可用协议
+          setAvailableProtocols(protocols);
+
+          // 如果当前选中的协议不在新列表中，重置为第一个可用协议
+          if (protocols.length > 0 && !protocols.includes(protocol)) {
+            setProtocol(protocols[0]);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading SKUs:', error);
+      }
+    };
+
+    loadSKUs();
+  }, [selectedRegion, selectedScenarios]);
 
   // Effects
   useEffect(() => {
@@ -761,18 +692,34 @@ const StaticResidentialPurchase = () => {
       if (!userOverrideMode) { setBandwidthMode(lastScenario.recommend.bandwidthMode); setSelectedSku(null); }
     }
     if (lastScenario || selectedTerminal) {
-      const recProto = selectedTerminal?.recommendedProtocol || 'SOCKS5';
-      if (selectedTerminal) {
-        const compatible = selectedTerminal.compatible || [];
-        if (!compatible.includes(protocol)) setProtocol(recProto);
+      // 使用 productService 获取推荐协议
+      const recProto = productService.getRecommendedProtocolForTerminal(selectedTerminal, availableProtocols);
+
+      if (selectedTerminal && availableProtocols.length > 0) {
+        // 检查当前协议是否与终端兼容
+        const isCompatible = productService.isProtocolCompatibleWithTerminal(protocol, selectedTerminal);
+
+        if (!isCompatible) {
+          // 自动切换到推荐的兼容协议
+          if (recProto) {
+            setProtocol(recProto);
+          } else {
+            // 选择第一个兼容的可用协议
+            const compatibleProtocols = productService.getCompatibleProtocolsForTerminal(selectedTerminal, availableProtocols);
+            if (compatibleProtocols.length > 0) {
+              setProtocol(compatibleProtocols[0]);
+            }
+          }
+        }
       }
+
       setRecommendation({
-        protocol: recProto,
+        protocol: recProto || productService.getRecommendedProtocol(availableProtocols),
         desc: lastScenario?.recommend?.desc || '请完善业务信息以获取推荐配置',
         modeLabel: lastScenario?.recommend?.bandwidthMode === 'traffic' ? '流量计费' : (lastScenario?.recommend?.bandwidthMode === 'bandwidth' ? '独享带宽' : '待定')
       });
     }
-  }, [selectedScenarios, selectedTerminal, userOverrideMode, protocol]);
+  }, [selectedScenarios, selectedTerminal, userOverrideMode, protocol, availableProtocols]);
 
   const calculateTotal = () => {
     if (!selectedSku) return 0;
@@ -784,11 +731,75 @@ const StaticResidentialPurchase = () => {
     const durationDiscount = purchaseType === 'subscription'
       ? (selectedCycle?.discountRate ?? 1)
       : (selectedDuration?.discountRate ?? 1);
-    return selectedSku.price * quantity * durationFactor * durationDiscount;
+    // 使用 productService 获取 SKU 价格
+    const skuPrice = productService.getSkuPrice(selectedSku);
+    return skuPrice * quantity * durationFactor * durationDiscount;
   };
 
   const totalUSDValue = calculateTotal();
   const totalCNYValue = totalUSDValue * 7.2;
+
+  // 购买处理函数
+  const handlePurchase = async () => {
+    if (!selectedRegion || !selectedSku) {
+      alert('请先选择地区和规格');
+      return;
+    }
+
+    // 准备订单数据
+    const durationDays = purchaseType === 'subscription'
+      ? selectedCycle?.days
+      : (selectedDuration?.days ?? customDurationDays);
+
+    // 确定实际支付方式：根据选中的支付方式
+    // 对于Stripe，附加具体支付方式（如stripe:card, stripe:alipay, stripe:wechat_pay）
+    const actualPaymentMethod = paymentMethod === 'stripe'
+      ? `stripe:${stripePaymentMethod}`
+      : paymentMethod;
+
+    const orderData = {
+      country: selectedRegion.id,
+      scenario: selectedScenarios[0]?.id || 'ecommerce',
+      template_id: selectedSku?.id,  // SKU的ID就是模板ID
+      protocol: protocol,  // 交付协议
+      ip_level: selectedSku.level || 'standard',
+      use_terminal: selectedTerminal?.id || 'mobile',
+      ip_feature: selectedSku.type || 'static',
+      udp_enabled: selectedSku.udp || false,
+      traffic_mode: bandwidthMode,
+      traffic_package: selectedSku.traffic || 'unlimited',
+      purchase_duration: durationDays,
+      quantity: quantity,
+      payment_method: actualPaymentMethod,
+      auto_renew: autoRenew,
+      amount: totalUSDValue,
+    };
+
+    console.log('Order data:', orderData);
+    console.log('Payment method:', paymentMethod, '→ Actual payment method:', actualPaymentMethod);
+
+    // 执行购买流程
+    const result = await executePurchase(
+      orderData,
+      actualPaymentMethod,
+      // onSuccess callback
+      (data) => {
+        console.log('Purchase successful:', data);
+        alert(`购买成功！订单号: ${data.orderNo}\n支付金额: ¥${data.actualPay || data.amount}`);
+        setIsProcessingPayment(false);
+      },
+      // onError callback
+      (error) => {
+        console.error('Purchase failed:', error);
+        alert(`购买失败: ${error}`);
+        setIsProcessingPayment(false);
+      }
+    );
+
+    if (result.success) {
+      setIsProcessingPayment(false);
+    }
+  };
 
   // Balance & Coupon Deduction Logic
   let balanceDeduction = 0;
@@ -804,13 +815,13 @@ const StaticResidentialPurchase = () => {
   const afterCouponCNY = afterCouponUSD * 7.2;
 
   // Recalculate balance deduction based on after-coupon amount
-  if (useBalance) {
-    if (USER_BALANCE >= afterCouponUSD) {
+  if (paymentMethod === 'balance') {
+    if (userBalance >= afterCouponUSD) {
       balanceDeduction = afterCouponUSD;
       finalPayAmount = 0;
     } else {
-      balanceDeduction = USER_BALANCE;
-      finalPayAmount = afterCouponUSD - USER_BALANCE;
+      balanceDeduction = userBalance;
+      finalPayAmount = afterCouponUSD - userBalance;
     }
   } else {
     finalPayAmount = afterCouponUSD;
@@ -878,28 +889,12 @@ const StaticResidentialPurchase = () => {
   // Shared payment footer renderer
   const renderPaymentFooter = (brandColor = '#1A73E8') => (
     <>
-      {/* Balance & Subscription */}
+      {/* Subscription */}
       <div className="space-y-3 pt-2 border-t border-gray-100">
-        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-200">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-blue-100 rounded-lg text-[#1A73E8]">
-              <Wallet className="w-4 h-4" />
-            </div>
-            <div>
-              <div className="text-sm font-semibold text-gray-900">使用余额支付</div>
-              <div className="text-xs text-gray-500">可用余额: <span className="font-medium text-gray-900">${USER_BALANCE.toFixed(2)}</span></div>
-            </div>
-          </div>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input type="checkbox" className="sr-only peer" checked={useBalance} onChange={(e) => setUseBalance(e.target.checked)} />
-            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#1A73E8]"></div>
-          </label>
-        </div>
-
         <div className="flex items-start gap-3 p-3 bg-blue-50/50 rounded-xl border border-blue-100">
           <div className="pt-0.5">
-            <input type="checkbox" className="rounded border-gray-300 text-[#1A73E8] focus:ring-blue-500 w-4 h-4" 
-              checked={isSubscribed} onChange={(e) => setIsSubscribed(e.target.checked)} 
+            <input type="checkbox" className="rounded border-gray-300 text-[#1A73E8] focus:ring-blue-500 w-4 h-4"
+              checked={isSubscribed} onChange={(e) => setIsSubscribed(e.target.checked)}
             />
           </div>
           <div>
@@ -922,25 +917,20 @@ const StaticResidentialPurchase = () => {
 
       <div className="space-y-3 pt-2">
         <button
-          onClick={() => {
-            if (!isLoggedIn) {
-              setShowAuthForm(true);
-              // Scroll to auth form
-              if (authFormRef.current) {
-                authFormRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              } else {
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }
-              return;
-            }
-            setIsProcessingPayment(true);
-          }}
-          disabled={!agreedTerms}
+          onClick={handlePurchase}
+          disabled={!agreedTerms || isProcessing}
           style={{ backgroundColor: agreedTerms ? brandColor : undefined }}
-          className={`w-full py-3.5 text-white rounded-xl font-semibold text-[15px] transition-all shadow-md shadow-blue-100 active:scale-[0.98] flex items-center justify-center gap-2 ${!agreedTerms ? 'bg-gray-300 cursor-not-allowed' : 'hover:opacity-90'}`}
+          className={`w-full py-3.5 text-white rounded-xl font-semibold text-[15px] transition-all shadow-md shadow-blue-100 active:scale-[0.98] flex items-center justify-center gap-2 ${!agreedTerms || isProcessing ? 'bg-gray-300 cursor-not-allowed' : 'hover:opacity-90'}`}
         >
-          <span>立即支付</span>
-          {useBalance && balanceDeduction > 0 && (
+          {isProcessing ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>处理中...</span>
+            </>
+          ) : (
+            <span>立即支付</span>
+          )}
+          {paymentMethod === 'balance' && balanceDeduction > 0 && (
             <span className="text-white/70 text-sm font-normal">
               (余额抵扣 ${balanceDeduction.toFixed(2)})
             </span>
@@ -981,185 +971,39 @@ const StaticResidentialPurchase = () => {
   // Terminal icon mapping
   const terminalIcons = { fingerprint: Globe, mobile: Smartphone, server: Server, router: Wifi, api: Terminal };
 
-  // Country codes for phone field
-  const AUTH_COUNTRY_CODES = [
-    { code: '+86',  label: '中国', flag: '🇨🇳' },
-    { code: '+1',   label: '美国/加拿大', flag: '🇺🇸' },
-    { code: '+44',  label: '英国', flag: '🇬🇧' },
-    { code: '+81',  label: '日本', flag: '🇯🇵' },
-    { code: '+82',  label: '韩国', flag: '🇰🇷' },
-    { code: '+852', label: '中国香港', flag: '🇭🇰' },
-    { code: '+886', label: '中国台湾', flag: '🇹🇼' },
-    { code: '+65',  label: '新加坡', flag: '🇸🇬' },
-    { code: '+60',  label: '马来西亚', flag: '🇲🇾' },
-    { code: '+61',  label: '澳大利亚', flag: '🇦🇺' },
-    { code: '+49',  label: '德国', flag: '🇩🇪' },
-    { code: '+33',  label: '法国', flag: '🇫🇷' },
-    { code: '+7',   label: '俄罗斯', flag: '🇷🇺' },
-    { code: '+91',  label: '印度', flag: '🇮🇳' },
-    { code: '+55',  label: '巴西', flag: '🇧🇷' },
-  ];
+  // Show loading state
+  if (isLoadingData) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">加载产品数据中...</p>
+        </div>
+      </div>
+    );
+  }
 
-  // Password strength helper
-  const getAuthPwdStrength = (pwd) => {
-    if (!pwd) return { level: 0, text: '', color: '' };
-    let s = 0;
-    if (pwd.length >= 6) s++;
-    if (pwd.length >= 10) s++;
-    if (/[a-z]/.test(pwd)) s++;
-    if (/[A-Z]/.test(pwd)) s++;
-    if (/\d/.test(pwd)) s++;
-    if (/[^A-Za-z0-9]/.test(pwd)) s++;
-    if (s <= 2) return { level: 1, text: '弱', color: '#ef4444' };
-    if (s <= 4) return { level: 2, text: '中', color: '#f59e0b' };
-    return { level: 3, text: '强', color: '#22c55e' };
-  };
-  const authPwdStrength = getAuthPwdStrength(authPassword);
-
-  // Close country-code dropdown on outside click
-  useEffect(() => {
-    if (!showAuthCodeDropdown) return;
-    const handler = (e) => {
-      if (authDropdownRef.current && !authDropdownRef.current.contains(e.target)) setShowAuthCodeDropdown(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [showAuthCodeDropdown]);
-
-  // Auth Handlers
-  const handleLoginSubmit = (e) => {
-    e.preventDefault();
-    setAuthSubmitting(true);
-    setTimeout(() => {
-      setAuthSubmitting(false);
-      if (authEmail && authPassword) {
-        setIsLoggedIn(true);
-        setShowAuthForm(false);
-      } else {
-        setAuthErrors({ email: '请输入邮箱', password: '请输入密码' });
-      }
-    }, 1500);
-  };
-
-  const handleRegisterSubmit = async (e) => {
-    e.preventDefault();
-    // Validate
-    const errs = {};
-    if (!authEmail.trim()) errs.email = '请输入邮箱地址';
-    else if (!/^[\w-]+(\.[\w-]+)*@[\w-]+(\.[\w-]+)+$/.test(authEmail)) errs.email = '请输入正确的邮箱格式';
-    if (authPhone.trim() && !/^\d{5,15}$/.test(authPhone)) errs.phone = '请输入有效的手机号码';
-    if (!authPassword) errs.password = '请输入密码';
-    else if (authPassword.length < 6) errs.password = '密码长度至少6位';
-    if (!authConfirmPassword) errs.confirmPassword = '请确认密码';
-    else if (authPassword !== authConfirmPassword) errs.confirmPassword = '两次密码输入不一致';
-    if (!authVerifyCode) errs.verifyCode = '请输入验证码';
-    if (!authCaptchaVerified) errs.captcha = '请完成滑块验证';
-    if (!authAgreement) errs.agreement = '请阅读并同意相关协议';
-    if (Object.keys(errs).length > 0) { setAuthErrors(errs); return; }
-
-    setAuthSubmitting(true);
-    try {
-      const regBody = { email: authEmail, password: authPassword, verificationCode: authVerifyCode };
-      if (authPhone.trim()) regBody.phone = `${authCountryCode}${authPhone}`;
-      const resp = await fetch('/client/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(regBody),
-      });
-      const data = await resp.json();
-      if (!resp.ok) throw new Error(data.message || data.error || '注册失败');
-      setJustRegistered(true);
-      setAuthMode('login');
-      setAuthErrors({});
-    } catch (err) {
-      let msg = err.message || '注册失败，请稍后重试';
-      if (msg.includes('verification code')) msg = '验证码无效或已过期';
-      if (msg.includes('already exists')) msg = '该邮箱已被注册';
-      setAuthErrors(prev => ({ ...prev, submit: msg }));
-    } finally {
-      setAuthSubmitting(false);
-    }
-  };
-
-  const handleSendVerifyCode = async () => {
-    if (verifyCodeCountdown > 0) return;
-    if (!authEmail.trim() || !/^[\w-]+(\.[\w-]+)*@[\w-]+(\.[\w-]+)+$/.test(authEmail)) {
-      setAuthErrors(prev => ({ ...prev, email: '请输入正确的邮箱地址' }));
-      return;
-    }
-    try {
-      const resp = await fetch('/client/send-verification-code', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: authEmail }),
-      });
-      const data = await resp.json();
-      if (!resp.ok) throw new Error(data.message || data.error || '发送失败');
-      setVerifyCodeCountdown(60);
-      const timer = setInterval(() => {
-        setVerifyCodeCountdown(prev => {
-          if (prev <= 1) { clearInterval(timer); return 0; }
-          return prev - 1;
-        });
-      }, 1000);
-    } catch (err) {
-      setAuthErrors(prev => ({ ...prev, verifyCode: err.message || '验证码发送失败' }));
-    }
-  };
-
-  // Smooth back navigation to homepage
-  const handleBackToHome = () => {
-    const ispRoot = document.getElementById('isp-root');
-    const overlay = document.getElementById('page-transition-overlay');
-    if (ispRoot) ispRoot.classList.add('exiting');
-    if (overlay) {
-      // Update spinner text for going back
-      const txt = overlay.querySelector('.spinner-text');
-      if (txt) txt.textContent = '返回首页...';
-      setTimeout(() => overlay.classList.add('active'), 150);
-    }
-    setTimeout(() => {
-      window.location.href = '/';
-    }, 420);
-  };
+  // Show error state
+  if (dataError) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <p className="text-gray-800 font-medium">加载失败</p>
+          <p className="text-gray-600 text-sm mt-2">{dataError}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            重新加载
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="pb-12" style={{ animation: 'none' }}>
-      {/* Global language switcher anchor for ISP purchase page */}
-      <div id="isp-lang-anchor" className="fixed top-4 right-4 z-[1200]" />
-
-      {/* ═══════════════ Breadcrumb / Back Navigation ═══════════════ */}
-      <div className="mb-5 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleBackToHome}
-            className="group flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-gray-500 hover:text-[#1A73E8] hover:bg-blue-50/60 transition-all duration-200"
-          >
-            <ArrowLeft className="w-4 h-4 transition-transform duration-200 group-hover:-translate-x-0.5" />
-            <span>返回</span>
-          </button>
-          <div className="hidden sm:flex items-center gap-1.5 text-sm text-gray-400">
-            <Home className="w-3.5 h-3.5" />
-            <span className="cursor-pointer hover:text-[#1A73E8] transition-colors" onClick={handleBackToHome}>首页</span>
-            <ChevronRight className="w-3 h-3" />
-            <span className="text-gray-700 font-medium">购买静态住宅（ISP）代理</span>
-          </div>
-        </div>
-      </div>
-
-      {/* ═══════════════ Page Header ═══════════════ */}
-      <div className="mb-6">
-        <div className="flex items-center gap-3 mb-1">
-          <h1 className="text-base sm:text-lg lg:text-xl font-bold text-gray-900 tracking-tight">购买静态住宅（ISP）代理</h1>
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 border border-emerald-100 text-[11px] font-medium text-emerald-600">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            资源可用
-          </span>
-        </div>
-        <p className="text-xs sm:text-sm text-gray-400">独享原生住宅IP · 100%真实ISP分配 · 支持HTTP/SOCKS5/WireGuard</p>
-      </div>
-
-      {/* Auth form moved to below quantity selector */}
+    <div className="animate-in fade-in duration-500 pb-12">
 
       {/* ═══════════════ Main Grid ═══════════════ */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
@@ -1168,26 +1012,14 @@ const StaticResidentialPurchase = () => {
         <div className="lg:col-span-8 space-y-5">
           
           {/* Main Config Card */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden p-3 sm:p-4 lg:p-6 space-y-5 sm:space-y-6 lg:space-y-8">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden p-6 space-y-8">
             
-            {/* Header */}
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-gray-900">需求配置</h2>
-              <button onClick={openGuide}
-                className="flex items-center gap-1.5 text-[13px] text-[#1A73E8] hover:text-[#1765CC] font-medium transition-colors whitespace-nowrap shrink-0 group"
-              >
-                <HelpCircle className="w-3.5 h-3.5" />
-                购买引导
-                <ChevronRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
-              </button>
-            </div>
-
             {/* Region Selection */}
             <div>
               <SectionLabel title="需求配置" required />
               <CustomSelect 
                 value={selectedRegion}
-                options={REGIONS}
+                options={regions}
                 onChange={setSelectedRegion}
                 placeholder="请选择国家/地区..."
                 renderValue={(region) => {
@@ -1227,33 +1059,10 @@ const StaticResidentialPurchase = () => {
             {/* Business Scenario */}
             <div>
               <SectionLabel title="目标业务用途" required />
-              <div className="flex flex-col sm:flex-row rounded-2xl border border-gray-100 overflow-hidden bg-white sm:min-h-[180px] sm:max-h-[330px]">
-                {/* Mobile: Horizontal Category Tabs */}
-                <div className="flex sm:hidden border-b border-gray-100 bg-[#F8F9FB] shrink-0">
-                  {BUSINESS_CATEGORIES.map(cat => {
-                    const isActive = viewCategory.id === cat.id;
-                    return (
-                      <button 
-                        key={cat.id}
-                        onClick={() => setViewCategory(cat)}
-                        className={`relative flex-1 py-3 text-[13px] font-medium transition-all ${
-                          isActive 
-                            ? 'text-[#1A73E8] bg-white font-bold' 
-                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100/50'
-                        }`}
-                      >
-                        {isActive && (
-                          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[3px] w-8 bg-[#1A73E8] rounded-t-full"></div>
-                        )}
-                        {cat.name}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Desktop: Left Sidebar */}
-                <div className="hidden sm:flex w-24 lg:w-28 shrink-0 bg-[#F8F9FB] flex-col">
-                  {BUSINESS_CATEGORIES.map(cat => {
+              <div className="flex rounded-2xl border border-gray-100 overflow-hidden bg-white min-h-[180px] max-h-[330px]">
+                {/* Left Sidebar */}
+                <div className="w-28 shrink-0 bg-[#F8F9FB] flex flex-col">
+                  {businessCategories.map(cat => {
                     const isActive = viewCategory.id === cat.id;
                     return (
                       <button 
@@ -1275,8 +1084,8 @@ const StaticResidentialPurchase = () => {
                 </div>
                 
                 {/* Right Content */}
-                <div className="flex-1 p-3 sm:p-3.5 lg:p-5 overflow-y-auto">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+                <div className="flex-1 p-5 overflow-y-auto">
+                  <div className="grid grid-cols-3 gap-3">
                     {viewCategory.scenarios.map(sc => {
                        const isActive = selectedScenarios.some(s => s.id === sc.id);
                        return (
@@ -1294,14 +1103,14 @@ const StaticResidentialPurchase = () => {
                             setUserOverrideMode(false); 
                             setSelectedSku(null); 
                           }}
-                          className={`relative flex items-center gap-1.5 sm:gap-0 sm:justify-between px-2 py-2 sm:px-3 sm:py-2.5 rounded-xl border transition-all duration-200 ease-in-out group bg-white active:scale-[0.98] ${
+                          className={`relative flex items-center justify-between px-3 py-2.5 rounded-xl border transition-all duration-200 ease-in-out group bg-white active:scale-[0.98] ${
                             isActive 
                               ? 'border-[#1A73E8] shadow-sm ring-1 ring-[#1A73E8] ring-opacity-50' 
                               : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
                           }`}
                         >
-                          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-                          <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-md bg-white flex items-center justify-center overflow-hidden shrink-0 transition-transform duration-200 group-hover:scale-110">
+                          <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-md bg-white flex items-center justify-center overflow-hidden shrink-0 transition-transform duration-200 group-hover:scale-110">
                             {sc.id === 'ebay' ? (
                               <EbayIcon className="w-full h-full object-contain" />
                             ) : scenarioIcons[sc.id] ? (
@@ -1312,9 +1121,9 @@ const StaticResidentialPurchase = () => {
                               </div>
                             )}
                           </div>
-                            <span className="text-[11px] sm:text-[12px] font-bold text-gray-900 truncate" title={sc.name}>{sc.name}</span>
+                            <span className="text-[12px] font-bold text-gray-900" title={sc.name}>{sc.name}</span>
                           </div>
-                          <span className="hidden sm:inline text-[11px] text-[#1A73E8] font-medium whitespace-nowrap">仅剩 45</span>
+                          <span className="text-[11px] text-[#1A73E8] font-medium whitespace-nowrap">仅剩 45</span>
                           {isActive && (
                             <div className="absolute top-0 right-0 w-0 h-0 border-t-[12px] border-r-[12px] border-t-[#1A73E8] border-r-[#1A73E8] rounded-bl-lg rounded-tr-lg">
                               {/* Optional: Checkmark icon could go here if space permits, but simple triangle is cleaner */}
@@ -1346,15 +1155,15 @@ const StaticResidentialPurchase = () => {
             <div>
               <SectionLabel title="使用环境" subtitle="可选-影响协议适配" />
               <div className="flex flex-wrap gap-3">
-                {TERMINALS.map(term => {
+                {productService.getTerminals().map(term => {
                   const isActive = selectedTerminal?.id === term.id;
                   const IconComp = { fingerprint: Globe, mobile: Smartphone, server: Server, router: Wifi, api: Terminal }[term.id] || Globe;
                   return (
                     <button key={term.id}
                       onClick={() => setSelectedTerminal(isActive ? null : term)}
                       className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-[13px] font-medium transition-all duration-200 ${
-                        isActive 
-                          ? 'border-blue-600 bg-blue-50 text-blue-700 shadow-sm ring-1 ring-blue-600' 
+                        isActive
+                          ? 'border-blue-600 bg-blue-50 text-blue-700 shadow-sm ring-1 ring-blue-600'
                           : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'
                       }`}
                     >
@@ -1369,33 +1178,52 @@ const StaticResidentialPurchase = () => {
             {/* Protocol */}
             <div>
               <SectionLabel title="交付协议" required />
+              {selectedTerminal && (
+                <div className="mb-2 text-xs text-gray-500">
+                  {selectedTerminal.name} 支持的协议
+                </div>
+              )}
               <div className="flex flex-wrap gap-3">
-                {ALL_PROTOCOLS.map(p => {
+                {availableProtocols.length > 0 ? availableProtocols.map(p => {
                   const isSelected = protocol === p;
+                  // 使用 productService 检查兼容性
+                  const isDisabled = productService.shouldDisableProtocol(p, selectedTerminal, availableProtocols);
+                  const disableReason = productService.getProtocolDisableReason(p, selectedTerminal, availableProtocols);
+
+                  // 使用 productService 格式化协议名称
+                  const displayProtocol = productService.formatProtocolName(p);
+
                   return (
-                    <button key={p}
-                      onClick={() => setProtocol(p)}
+                    <button
+                      key={`protocol-${p}`}
+                      onClick={() => !isDisabled && setProtocol(p)}
+                      disabled={isDisabled}
                       className={`min-w-[80px] px-4 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200 ${
-                        isSelected
-                          ? 'bg-[#1A73E8] text-white shadow-md shadow-blue-200'
-                          : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300'
+                        isDisabled
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
+                          : isSelected
+                            ? 'bg-[#1A73E8] text-white shadow-md shadow-blue-200 cursor-pointer border border-transparent'
+                            : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300 cursor-pointer'
                       }`}
+                      title={isDisabled ? disableReason : undefined}
                     >
-                      {p === 'Wireguard' ? 'Wirguard' : p}
+                      {displayProtocol}
                     </button>
                   );
-                })}
+                }) : (
+                  <span className="text-gray-400 text-sm">请先选择国家/地区和业务场景</span>
+                )}
               </div>
             </div>
 
             {/* Duration */}
             <div>
               <SectionLabel title="IP购买时长" required />
-              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3">
-                {DURATIONS.map(d => {
-                  const isSelected = selectedDuration?.id === d.id;
+              <div className="grid grid-cols-5 gap-3">
+                {durations.map(d => {
+                  const isSelected = selectedDuration?.days === d.days;
                   return (
-                    <button key={d.id}
+                    <button key={d.days}
                       onClick={() => setSelectedDuration(d)}
                       className={`relative py-2.5 rounded-lg text-[13px] font-medium transition-all duration-200 ${
                         isSelected
@@ -1443,11 +1271,15 @@ const StaticResidentialPurchase = () => {
                 </div>
               )}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
-                {SKUS[bandwidthMode].map((sku, idx) => {
-                  const isActive = selectedSku?.id === sku.id;
+                {(skus[bandwidthMode] || []).map((sku, idx) => {
+                  const isActive = selectedSku?.id === sku.id && selectedSku?.traffic === sku.traffic && selectedSku?.bandwidth === sku.bandwidth;
                   const isPopular = idx === 2; // 3rd item as popular
+                  // 使用 productService 获取规格显示和价格
+                  const specDisplay = productService.formatSKUSpec(sku);
+                  const skuPrice = productService.getSkuPrice(sku);
+                  const priceDisplay = skuPrice > 0 ? `$${skuPrice}/月` : '价格待定';
                   return (
-                      <button key={sku.id}
+                      <button key={`${sku.id}-${sku.traffic || sku.bandwidth}`}
                       onClick={() => setSelectedSku(sku)}
                       className={`relative p-3.5 rounded-xl border-2 transition-all duration-150 flex flex-col items-center gap-1 ${
                         isActive
@@ -1460,9 +1292,12 @@ const StaticResidentialPurchase = () => {
                           热销
                         </div>
                       )}
-                      <div className={`text-base font-bold ${isActive ? 'text-[#1A73E8]' : 'text-gray-800'}`}>{sku.name}</div>
+                      <div className={`text-base font-bold ${isActive ? 'text-[#1A73E8]' : 'text-gray-800'}`}>{specDisplay}</div>
                       <div className={`text-[11px] ${isActive ? 'text-[#1A73E8]' : 'text-gray-400'}`}>
-                        ${sku.price}/{bandwidthMode === 'traffic' ? '月' : '月'}
+                        {bandwidthMode === 'traffic' ? '按流量' : '按带宽'}
+                      </div>
+                      <div className={`text-[12px] font-semibold ${isActive ? 'text-[#1A73E8]' : 'text-gray-500'}`}>
+                        {priceDisplay}
                       </div>
                       {isActive && (
                         <div className="absolute top-1.5 right-1.5 w-4 h-4 bg-[#1A73E8] rounded-full flex items-center justify-center">
@@ -1502,349 +1337,13 @@ const StaticResidentialPurchase = () => {
               </div>
             </div>
 
-            {/* ═══════════════ Inline Auth Form (below quantity) ═══════════════ */}
-            {showAuthForm && !isLoggedIn && (
-              <div ref={authFormRef} className="mt-6 bg-white rounded-2xl border border-blue-100 shadow-sm p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-5 animate-in fade-in slide-in-from-top-4 duration-300">
-                {/* Header with tabs */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1 bg-gray-100/80 rounded-xl p-1">
-                    <button 
-                      onClick={() => { setAuthMode('register'); setAuthErrors({}); setJustRegistered(false); }}
-                      className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-medium transition-all ${authMode === 'register' ? 'bg-white text-[#1A73E8] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                    >
-                      <UserPlus className="w-3.5 h-3.5" />
-                      注册账户
-                    </button>
-                    <button 
-                      onClick={() => { setAuthMode('login'); setAuthErrors({}); }}
-                      className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-medium transition-all ${authMode === 'login' ? 'bg-white text-[#1A73E8] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                    >
-                      <LogIn className="w-3.5 h-3.5" />
-                      登录
-                    </button>
-                  </div>
-                  <button onClick={() => setShowAuthForm(false)} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all">
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-
-                {/* Info banner */}
-                <div className="flex items-center gap-2.5 p-3 bg-blue-50/70 border border-blue-100 rounded-xl">
-                  <Info className="w-4 h-4 text-blue-500 shrink-0" />
-                  <span className="text-[13px] text-blue-700">
-                    {authMode === 'register' ? '请先注册账户，即可完成支付购买代理资源' : '请登录您的账户以继续完成支付'}
-                  </span>
-                </div>
-
-                {/* ──── Register Form ──── */}
-                {authMode === 'register' && (
-                  <form onSubmit={handleRegisterSubmit} className="space-y-3.5">
-                    {/* Email */}
-                    <div>
-                      <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
-                        <span className="text-red-500 mr-0.5">*</span>邮箱地址
-                      </label>
-                      <div className="relative">
-                        <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
-                        <input 
-                          type="email" value={authEmail} 
-                          onChange={(e) => { setAuthEmail(e.target.value); if (authErrors.email) setAuthErrors(prev => ({...prev, email: ''})); }}
-                          placeholder="请输入邮箱地址"
-                          className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-blue-100 focus:border-[#1A73E8] outline-none transition-all text-sm placeholder:text-gray-300"
-                        />
-                      </div>
-                      {authErrors.email && <span className="text-[12px] text-red-500 mt-1 block">{authErrors.email}</span>}
-                    </div>
-
-                    {/* Phone (optional) */}
-                    <div>
-                      <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
-                        手机号码 <span className="text-gray-400 font-normal text-[11px]">（选填）</span>
-                      </label>
-                      <div className="flex gap-2">
-                        <div className="relative" ref={authDropdownRef}>
-                          <button type="button" onClick={() => setShowAuthCodeDropdown(!showAuthCodeDropdown)}
-                            className="flex items-center gap-1 px-2.5 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-[13px] min-w-[90px] focus:border-[#1A73E8] focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-                          >
-                            <span>{AUTH_COUNTRY_CODES.find(c => c.code === authCountryCode)?.flag}</span>
-                            <span className="text-gray-700">{authCountryCode}</span>
-                            <ChevronDown className="ml-auto w-3 h-3 text-gray-400" />
-                          </button>
-                          {showAuthCodeDropdown && (
-                            <div className="absolute z-50 top-full left-0 mt-1 w-56 max-h-48 overflow-y-auto bg-white border border-gray-200 rounded-xl shadow-xl">
-                              {AUTH_COUNTRY_CODES.map((c) => (
-                                <button key={c.code} type="button"
-                                  onClick={() => { setAuthCountryCode(c.code); setShowAuthCodeDropdown(false); }}
-                                  className={`w-full flex items-center gap-2 px-3 py-2 text-[13px] hover:bg-blue-50 transition-colors ${authCountryCode === c.code ? 'bg-blue-50 text-[#1A73E8]' : 'text-gray-700'}`}
-                                >
-                                  <span>{c.flag}</span><span>{c.label}</span><span className="ml-auto text-gray-400">{c.code}</span>
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        <div className="relative flex-1">
-                          <Smartphone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
-                          <input type="tel" value={authPhone}
-                            onChange={(e) => { setAuthPhone(e.target.value.replace(/\D/g, '')); if (authErrors.phone) setAuthErrors(prev => ({...prev, phone: ''})); }}
-                            placeholder="请输入手机号码"
-                            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-blue-100 focus:border-[#1A73E8] outline-none transition-all text-sm placeholder:text-gray-300"
-                          />
-                        </div>
-                      </div>
-                      {authErrors.phone && <span className="text-[12px] text-red-500 mt-1 block">{authErrors.phone}</span>}
-                    </div>
-
-                    {/* Password */}
-                    <div>
-                      <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
-                        <span className="text-red-500 mr-0.5">*</span>密码
-                      </label>
-                      <div className="relative">
-                        <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
-                        <input 
-                          type={showAuthPassword ? 'text' : 'password'} value={authPassword}
-                          onChange={(e) => { setAuthPassword(e.target.value); if (authErrors.password) setAuthErrors(prev => ({...prev, password: ''})); }}
-                          placeholder="请输入密码（至少6位）"
-                          className="w-full pl-10 pr-12 py-2.5 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-blue-100 focus:border-[#1A73E8] outline-none transition-all text-sm placeholder:text-gray-300"
-                        />
-                        <button type="button" onClick={() => setShowAuthPassword(!showAuthPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600">
-                          {showAuthPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                      </div>
-                      {authPassword && (
-                        <div className="flex items-center gap-2 mt-1.5">
-                          <div className="flex gap-1">
-                            {[1, 2, 3].map((i) => (
-                              <div key={i} className="w-6 h-1 rounded-full transition-colors"
-                                style={{ backgroundColor: authPwdStrength.level >= i ? authPwdStrength.color : '#e5e7eb' }} />
-                            ))}
-                          </div>
-                          <span className="text-[11px]" style={{ color: authPwdStrength.color }}>{authPwdStrength.text}</span>
-                        </div>
-                      )}
-                      {authErrors.password && <span className="text-[12px] text-red-500 mt-1 block">{authErrors.password}</span>}
-                    </div>
-
-                    {/* Confirm Password */}
-                    <div>
-                      <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
-                        <span className="text-red-500 mr-0.5">*</span>确认密码
-                      </label>
-                      <div className="relative">
-                        <Shield className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
-                        <input 
-                          type={showAuthConfirmPwd ? 'text' : 'password'} value={authConfirmPassword}
-                          onChange={(e) => { setAuthConfirmPassword(e.target.value); if (authErrors.confirmPassword) setAuthErrors(prev => ({...prev, confirmPassword: ''})); }}
-                          placeholder="请再次输入密码"
-                          className="w-full pl-10 pr-12 py-2.5 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-blue-100 focus:border-[#1A73E8] outline-none transition-all text-sm placeholder:text-gray-300"
-                        />
-                        <button type="button" onClick={() => setShowAuthConfirmPwd(!showAuthConfirmPwd)} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600">
-                          {showAuthConfirmPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                      </div>
-                      {authConfirmPassword && authPassword === authConfirmPassword && (
-                        <div className="flex items-center gap-1 mt-1">
-                          <CheckCircle className="w-3 h-3 text-emerald-500" />
-                          <span className="text-[12px] text-emerald-500">密码一致</span>
-                        </div>
-                      )}
-                      {authErrors.confirmPassword && <span className="text-[12px] text-red-500 mt-1 block">{authErrors.confirmPassword}</span>}
-                    </div>
-
-                    {/* Verify Code */}
-                    <div>
-                      <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
-                        <span className="text-red-500 mr-0.5">*</span>邮箱验证码
-                      </label>
-                      <div className="flex gap-2.5">
-                        <div className="relative flex-1">
-                          <Shield className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
-                          <input 
-                            type="text" value={authVerifyCode} maxLength={6}
-                            onChange={(e) => { setAuthVerifyCode(e.target.value.replace(/\D/g, '')); if (authErrors.verifyCode) setAuthErrors(prev => ({...prev, verifyCode: ''})); }}
-                            placeholder="请输入6位验证码"
-                            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-blue-100 focus:border-[#1A73E8] outline-none transition-all text-sm placeholder:text-gray-300"
-                          />
-                        </div>
-                        <button 
-                          type="button" onClick={handleSendVerifyCode}
-                          disabled={verifyCodeCountdown > 0 || authSubmitting}
-                          className="px-4 py-2.5 rounded-xl text-[13px] font-medium whitespace-nowrap transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-[#1A73E8] text-white hover:bg-[#1557B0] active:scale-[0.98]"
-                        >
-                          {verifyCodeCountdown > 0 ? `${verifyCodeCountdown}s` : '获取验证码'}
-                        </button>
-                      </div>
-                      {authErrors.verifyCode && <span className="text-[12px] text-red-500 mt-1 block">{authErrors.verifyCode}</span>}
-                    </div>
-
-                    {/* Slider CAPTCHA */}
-                    <div>
-                      <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
-                        <span className="text-red-500 mr-0.5">*</span>人机验证
-                      </label>
-                      <SliderCaptcha onVerified={(v) => { setAuthCaptchaVerified(v); if (authErrors.captcha) setAuthErrors(prev => ({...prev, captcha: ''})); }} />
-                      {authErrors.captcha && <span className="text-[12px] text-red-500 mt-1 block">{authErrors.captcha}</span>}
-                    </div>
-
-                    {/* Agreement */}
-                    <div>
-                      <label className="flex items-start gap-2 cursor-pointer select-none">
-                        <input type="checkbox" checked={authAgreement}
-                          onChange={(e) => { setAuthAgreement(e.target.checked); if (authErrors.agreement) setAuthErrors(prev => ({...prev, agreement: ''})); }}
-                          className="mt-0.5 w-4 h-4 rounded border-gray-300 text-[#1A73E8] focus:ring-[#1A73E8]"
-                        />
-                        <span className="text-[12px] text-gray-500 leading-relaxed">
-                          我已阅读并同意
-                          <a href="/terms" target="_blank" className="text-[#1A73E8] hover:text-[#1557B0] mx-0.5">《用户协议》</a>
-                          和
-                          <a href="/privacy" target="_blank" className="text-[#1A73E8] hover:text-[#1557B0] mx-0.5">《隐私政策》</a>
-                        </span>
-                      </label>
-                      {authErrors.agreement && <span className="text-[12px] text-red-500 mt-1 block">{authErrors.agreement}</span>}
-                    </div>
-
-                    {/* Submit error */}
-                    {authErrors.submit && (
-                      <div className="bg-red-50 text-red-600 text-[13px] px-3 py-2 rounded-xl border border-red-200">
-                        {authErrors.submit}
-                      </div>
-                    )}
-
-                    {/* Submit */}
-                    <button 
-                      type="submit" disabled={authSubmitting}
-                      className="w-full py-3 bg-[#1A73E8] hover:bg-[#1557B0] text-white rounded-xl font-semibold text-[14px] transition-all shadow-md shadow-blue-100 active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
-                    >
-                      {authSubmitting ? (
-                        <><Loader2 className="w-4 h-4 animate-spin" /><span>注册中...</span></>
-                      ) : (
-                        <><UserPlus className="w-4 h-4" /><span>立即注册</span></>
-                      )}
-                    </button>
-
-                    <p className="text-center text-[13px] text-gray-400">
-                      已有账户？{' '}
-                      <button type="button" onClick={() => { setAuthMode('login'); setAuthErrors({}); }} className="text-[#1A73E8] hover:text-[#1557B0] font-medium">
-                        立即登录
-                      </button>
-                    </p>
-                  </form>
-                )}
-
-                {/* ──── Login Form ──── */}
-                {authMode === 'login' && (
-                  <form onSubmit={handleLoginSubmit} className="space-y-5">
-                    <h2 className="text-center text-2xl font-bold text-gray-900">欢迎您登录！</h2>
-                    
-                    {/* Registration success banner */}
-                    {justRegistered && (
-                      <div className="flex items-center gap-2.5 p-3 bg-emerald-50 border border-emerald-100 rounded-xl">
-                        <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
-                        <span className="text-[13px] text-emerald-700 font-medium">注册成功！请使用您的邮箱和密码登录</span>
-                      </div>
-                    )}
-
-                    {/* Email */}
-                    <div>
-                      <input 
-                        type="email" value={authEmail}
-                        onChange={(e) => { setAuthEmail(e.target.value); if (authErrors.email) setAuthErrors(prev => ({...prev, email: ''})); }}
-                        placeholder="请输入邮箱地址/手机号"
-                        className="w-full px-4 py-3 rounded-lg bg-gray-50 border-0 focus:ring-2 focus:ring-[#1A73E8] outline-none transition-all text-sm placeholder:text-gray-400"
-                      />
-                      {authErrors.email && <span className="text-[12px] text-red-500 mt-1 block">{authErrors.email}</span>}
-                    </div>
-
-                    {/* Password */}
-                    <div>
-                      <div className="relative">
-                        <input 
-                          type={showAuthPassword ? 'text' : 'password'} value={authPassword}
-                          onChange={(e) => { setAuthPassword(e.target.value); if (authErrors.password) setAuthErrors(prev => ({...prev, password: ''})); }}
-                          placeholder="密码"
-                          className="w-full px-4 py-3 rounded-lg bg-gray-50 border-0 focus:ring-2 focus:ring-[#1A73E8] outline-none transition-all text-sm placeholder:text-gray-400 pr-10"
-                        />
-                        <button type="button" onClick={() => setShowAuthPassword(!showAuthPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                          {showAuthPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                        </button>
-                      </div>
-                      {authErrors.password && <span className="text-[12px] text-red-500 mt-1 block">{authErrors.password}</span>}
-                    </div>
-
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">没有账号？ <button type="button" onClick={() => { setAuthMode('register'); setAuthErrors({}); setJustRegistered(false); }} className="cursor-pointer hover:text-[#1557B0] text-[#1A73E8] font-medium">立即注册</button></span>
-                      <a href="#" className="hover:text-[#1557B0] text-gray-500">忘记密码</a>
-                    </div>
-
-                    <div className="flex items-center">
-                      <input id="isp_login_agreement" type="checkbox" className="w-4 h-4 text-[#1A73E8] border-gray-300 rounded focus:ring-[#1A73E8]" />
-                      <label htmlFor="isp_login_agreement" className="ml-2 text-xs text-gray-500">
-                        我已阅读并同意<a href="/terms" target="_blank" className="text-[#1A73E8] hover:text-[#1557B0] mx-1">《用户协议》</a>和<a href="/privacy" target="_blank" className="text-[#1A73E8] hover:text-[#1557B0] mx-1">《隐私政策》</a>
-                      </label>
-                    </div>
-
-                    {/* Submit */}
-                    <button 
-                      type="submit" disabled={authSubmitting}
-                      className="w-full py-3 bg-[#1A73E8] hover:bg-[#1557B0] text-white rounded-lg font-medium text-base transition-all shadow-sm active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
-                    >
-                      {authSubmitting ? (
-                        <><Loader2 className="w-5 h-5 animate-spin" /><span>登录中...</span></>
-                      ) : (
-                        <span>登 录</span>
-                      )}
-                    </button>
-
-                    <div className="flex items-center my-4">
-                      <div className="flex-1 border-t border-gray-200"></div>
-                      <span className="px-4 text-sm text-gray-400">其他登录方式</span>
-                      <div className="flex-1 border-t border-gray-200"></div>
-                    </div>
-
-                    <div className="flex justify-around items-center">
-                      <div className="flex flex-col items-center cursor-pointer hover:opacity-80 transition-opacity">
-                        <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center mb-2 hover:bg-gray-200 transition-colors">
-                          <WeChatIcon size="md" className="w-7 h-7" />
-                        </div>
-                        <span className="text-xs text-gray-500">微信</span>
-                      </div>
-                      <div className="flex flex-col items-center cursor-pointer hover:opacity-80 transition-opacity">
-                        <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center mb-2 hover:bg-gray-200 transition-colors">
-                          <svg viewBox="0 0 24 24" className="w-7 h-7 text-[#0866FF]" fill="currentColor"><path d="M9.101 23.691v-7.98H6.627v-3.667h2.474v-1.58c0-4.085 1.848-5.978 5.858-5.978.401 0 .955.042 1.468.103a8.68 8.68 0 0 1 1.141.195v3.325a8.623 8.623 0 0 0-.653-.036 26.805 26.805 0 0 0-.733-.009c-.707 0-1.259.096-1.675.309a1.686 1.686 0 0 0-.679.622c-.258.42-.374.995-.374 1.752v1.297h3.919l-.386 2.103-.287 1.564h-3.246v8.245C19.396 23.238 24 18.179 24 12.044c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.628 3.874 10.35 9.101 11.647Z" /></svg>
-                        </div>
-                        <span className="text-xs text-gray-500">Facebook</span>
-                      </div>
-                      <div className="flex flex-col items-center cursor-pointer hover:opacity-80 transition-opacity">
-                        <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center mb-2 hover:bg-gray-200 transition-colors">
-                          <svg viewBox="0 0 24 24" className="w-7 h-7">
-                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-                          </svg>
-                        </div>
-                        <span className="text-xs text-gray-500">Google</span>
-                      </div>
-                      <div className="flex flex-col items-center cursor-pointer hover:opacity-80 transition-opacity">
-                        <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center mb-2 hover:bg-gray-200 transition-colors">
-                          <svg viewBox="0 0 24 24" className="w-7 h-7 text-[#E6162D]" fill="currentColor"><path d="M10.098 20.323c-3.977.391-7.414-1.406-7.672-4.02-.259-2.609 2.759-5.047 6.74-5.441 3.979-.394 7.413 1.404 7.671 4.018.259 2.6-2.759 5.049-6.737 5.439l-.002.004zM9.05 17.219c-.384.616-1.208.884-1.829.602-.612-.279-.793-.991-.406-1.593.379-.595 1.176-.861 1.793-.601.622.263.82.972.442 1.592zm1.27-1.627c-.141.237-.449.353-.689.253-.236-.09-.313-.361-.177-.586.138-.227.436-.346.672-.24.239.09.315.36.18.601l.014-.028zm.176-2.719c-1.893-.493-4.033.45-4.857 2.118-.836 1.704-.026 3.591 1.886 4.21 1.983.64 4.318-.341 5.132-2.179.8-1.793-.201-3.642-2.161-4.149zm7.563-1.224c-.346-.105-.57-.18-.405-.615.375-.977.42-1.804 0-2.404-.781-1.112-2.915-1.053-5.364-.03 0 0-.766.331-.571-.271.376-1.217.315-2.224-.27-2.809-1.338-1.337-4.869.045-7.888 3.08C1.309 10.87 0 13.273 0 15.348c0 3.981 5.099 6.395 10.086 6.395 6.536 0 10.888-3.801 10.888-6.82 0-1.822-1.547-2.854-2.915-3.284v.01zm1.908-5.092c-.766-.856-1.908-1.187-2.96-.962-.436.09-.706.511-.616.932.09.42.511.691.932.602.511-.105 1.067.044 1.442.465.376.421.466.977.316 1.473-.136.406.089.856.51.992.405.119.857-.105.992-.512.33-1.021.12-2.178-.646-3.035l.03.045zm2.418-2.195c-1.576-1.757-3.905-2.419-6.054-1.968-.496.104-.812.587-.706 1.081.104.496.586.813 1.082.707 1.532-.331 3.185.15 4.296 1.383 1.112 1.246 1.429 2.943.947 4.416-.165.48.106 1.007.586 1.157.479.165.991-.104 1.157-.586.675-2.088.241-4.478-1.338-6.235l.03.045z" /></svg>
-                        </div>
-                        <span className="text-xs text-gray-500">微博</span>
-                      </div>
-                    </div>
-                  </form>
-                )}
-              </div>
-            )}
-
           </div>
         </div>
 
 
         {/* ─────────── RIGHT: Order Summary + Payment ─────────── */}
         <div className="lg:col-span-4">
-          <div className="lg:sticky lg:top-6 space-y-4">
+          <div className="sticky top-6 space-y-4">
             
             {/* Order Summary Card */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -1870,11 +1369,11 @@ const StaticResidentialPurchase = () => {
                 <OrderRow label="代理类型" value="静态住宅 ISP" />
                 <OrderRow label="国家/地区" value={selectedRegion ? `${selectedRegion.flag} ${selectedRegion.name}` : null} muted={!selectedRegion} />
                 <OrderRow label="业务场景" value={selectedScenarios.length > 0 ? selectedScenarios.map(s => s.name).join(', ') : null} muted={selectedScenarios.length === 0} />
-                <OrderRow label="交付协议" value={protocol} />
+                <OrderRow label="交付协议" value={protocol ? productService.formatProtocolName(protocol) : null} />
                 
                 <div className="border-t border-dashed border-gray-100 my-2"></div>
                 
-                <OrderRow label="规格套餐" value={selectedSku?.name} muted={!selectedSku} />
+                <OrderRow label="规格套餐" value={selectedSku ? productService.formatSKUSpec(selectedSku) : null} muted={!selectedSku} />
                 <OrderRow label="计费模式" value={bandwidthMode === 'traffic' ? '按流量' : '按带宽'} />
                 <OrderRow label="购买方式" value={getPurchaseTypeLabel()} />
                 {purchaseType === 'subscription' ? (
@@ -1978,7 +1477,7 @@ const StaticResidentialPurchase = () => {
                     )}
 
                     {/* Balance deduction */}
-                    {useBalance && balanceDeduction > 0 && (
+                    {paymentMethod === 'balance' && balanceDeduction > 0 && (
                       <div className="flex justify-between items-center px-4 py-2.5 text-[13px]">
                         <span className="text-gray-600 flex items-center gap-1.5">
                           余额抵扣
@@ -1994,17 +1493,17 @@ const StaticResidentialPurchase = () => {
                   <div className="flex justify-between items-end px-4 py-3 bg-gray-50 border-t border-gray-200">
                     <div>
                       <div className="text-[12px] font-semibold text-gray-500 uppercase tracking-wider">
-                        {(useBalance || couponApplied) ? '应付金额' : '合计'}
+                        {(paymentMethod === 'balance' || couponApplied) ? '应付金额' : '合计'}
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className={`font-bold tracking-tight tabular-nums ${(useBalance || couponApplied) ? 'text-xl text-[#1A73E8]' : 'text-xl text-gray-900'}`}>
+                      <div className={`font-bold tracking-tight tabular-nums ${(paymentMethod === 'balance' || couponApplied) ? 'text-xl text-[#1A73E8]' : 'text-xl text-gray-900'}`}>
                         <span className="text-sm mr-0.5 opacity-60">¥</span>
-                        {(useBalance || couponApplied) ? finalPayAmountCNY : totalCNY}
+                        {(paymentMethod === 'balance' || couponApplied) ? finalPayAmountCNY : totalCNY}
                       </div>
-                      {(useBalance || couponApplied) && (
+                      {(paymentMethod === 'balance' || couponApplied) && (
                         <div className="text-[11px] text-gray-400 mt-0.5 tabular-nums">
-                          ≈ ${(useBalance || couponApplied) ? (finalPayAmount).toFixed(2) : totalUSD} USD
+                          ≈ ${(paymentMethod === 'balance' || couponApplied) ? (finalPayAmount).toFixed(2) : totalUSD} USD
                         </div>
                       )}
                     </div>
@@ -2024,7 +1523,7 @@ const StaticResidentialPurchase = () => {
 
               <div className="p-4 space-y-4">
                 {/* Payment Methods — Card Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-4 sm:mb-6">
+                <div className="grid grid-cols-4 gap-3 mb-6">
                   {PAYMENT_METHODS.map(method => {
                     const isActive = paymentMethod === method.id;
                     return (
@@ -2047,11 +1546,21 @@ const StaticResidentialPurchase = () => {
                   })}
                 </div>
 
-                {/* Bank Card Details (Informational) */}
+                {/* Stripe Payment Method Selector */}
                 {paymentMethod === 'stripe' && (
+                  <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <StripePaymentMethodSelector
+                      selected={stripePaymentMethod}
+                      onChange={setStripePaymentMethod}
+                    />
+                  </div>
+                )}
+
+                {/* Bank Card Details (Informational) */}
+                {paymentMethod === 'stripe' && stripePaymentMethod === 'card' && (
                   <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300 px-1">
                     
-                    <div className="flex items-center gap-2 sm:gap-3 pt-1 pb-1 flex-wrap">
+                    <div className="flex items-center gap-3 pt-1 pb-1">
                       <div className="h-10 w-14 flex items-center justify-center rounded-lg overflow-hidden">
                         <img src={card1Img} alt="Mastercard" className="w-full h-full object-contain" />
                       </div>
@@ -2070,11 +1579,11 @@ const StaticResidentialPurchase = () => {
                     </div>
 
                     {/* Saved Cards Selection */}
-                    {SAVED_PAYMENT_METHODS.filter(m => m.type === 'card').length > 0 && (
+                    {savedPaymentMethods.filter(m => m.type === 'card').length > 0 && (
                       <div className="space-y-3">
                         <label className="text-sm font-medium text-gray-900">选择银行卡</label>
                         <div className="space-y-2">
-                          {SAVED_PAYMENT_METHODS.filter(m => m.type === 'card').map(card => (
+                          {savedPaymentMethods.filter(m => m.type === 'card').map(card => (
                             <div key={card.id} 
                               onClick={() => { setUseSavedCard(true); setSelectedSavedCardId(card.id); }}
                               className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${
@@ -2121,7 +1630,7 @@ const StaticResidentialPurchase = () => {
                     )}
 
                     {/* New Card Form */}
-                    {(!useSavedCard || SAVED_PAYMENT_METHODS.filter(m => m.type === 'card').length === 0) && (
+                    {(!useSavedCard || savedPaymentMethods.filter(m => m.type === 'card').length === 0) && (
                       <div className="space-y-4 pt-2 border-t border-gray-100 mt-2">
                         
                         <div>
@@ -2172,11 +1681,11 @@ const StaticResidentialPurchase = () => {
                           <div className="space-y-3">
                             <input type="text" placeholder="地址行 1" value={billingAddress.line1} onChange={(e) => setBillingAddress({...billingAddress, line1: e.target.value})} className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm outline-none focus:border-[#1A73E8]" />
                             <input type="text" placeholder="地址行 2 (可选)" value={billingAddress.line2} onChange={(e) => setBillingAddress({...billingAddress, line2: e.target.value})} className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm outline-none focus:border-[#1A73E8]" />
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="grid grid-cols-2 gap-3">
                               <input type="text" placeholder="城市" value={billingAddress.city} onChange={(e) => setBillingAddress({...billingAddress, city: e.target.value})} className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm outline-none focus:border-[#1A73E8]" />
                               <input type="text" placeholder="州/省" value={billingAddress.state} onChange={(e) => setBillingAddress({...billingAddress, state: e.target.value})} className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm outline-none focus:border-[#1A73E8]" />
                             </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="grid grid-cols-2 gap-3">
                               <input type="text" placeholder="邮编" value={billingAddress.postalCode} onChange={(e) => setBillingAddress({...billingAddress, postalCode: e.target.value})} className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm outline-none focus:border-[#1A73E8]" />
                               <input type="text" placeholder="国家" value={billingAddress.country} onChange={(e) => setBillingAddress({...billingAddress, country: e.target.value})} className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm outline-none focus:border-[#1A73E8]" />
                             </div>
@@ -2189,62 +1698,8 @@ const StaticResidentialPurchase = () => {
                   </div>
                 )}
 
-                {/* ── WeChat Pay Details ── */}
-                {paymentMethod === 'wechat' && (
-                  <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300 px-1">
-                    {/* WeChat Pay Branding */}
-                    <div className="p-4 rounded-2xl border border-green-100 bg-gradient-to-br from-green-50/60 to-emerald-50/40">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="w-10 h-10 rounded-xl bg-[#07C160] flex items-center justify-center shadow-sm shadow-green-200">
-                          <svg viewBox="0 0 576 512" className="w-6 h-6" fill="white" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M385.2 167.6c6.4 0 12.6.3 18.8 1.1C387.4 90.3 303.3 32 207.7 32 100.5 32 13 104.8 13 197.4c0 53.4 29.3 97.5 77.9 131.6l-19.3 58.6 68-34.1c24.4 4.8 43.8 9.7 68.2 9.7 6.2 0 12.1-.3 18.3-.8-3.8-13-5.9-26.8-5.9-41.2 0-87.8 79.2-154.2 165-154.2zm-104.5-52.9c14.5 0 24.2 9.7 24.2 24.4 0 14.5-9.7 24.2-24.2 24.2-14.8 0-29.3-9.7-29.3-24.2 0-14.8 14.5-24.4 29.3-24.4zm-136.4 48.6c-14.5 0-29.3-9.7-29.3-24.2 0-14.8 14.8-24.4 29.3-24.4 14.8 0 24.4 9.7 24.4 24.4 0 14.5-9.7 24.2-24.4 24.2zM563 319.4c0-77.9-77.9-141.3-165.4-141.3-92.7 0-165.4 63.4-165.4 141.3S305 460.7 397.6 460.7c19.3 0 38.9-4.8 58.6-9.7l53.4 29.3-14.8-48.6C534 402.1 563 363.2 563 319.4zm-219.1-24.5c-9.7 0-19.3-9.7-19.3-19.6 0-9.7 9.7-19.3 19.3-19.3 14.8 0 24.4 9.7 24.4 19.3 0 10-9.7 19.6-24.4 19.6zm107.1 0c-9.7 0-19.3-9.7-19.3-19.6 0-9.7 9.7-19.3 19.3-19.3 14.5 0 24.4 9.7 24.4 19.3 0 10-9.9 19.6-24.4 19.6z"/>
-                          </svg>
-                        </div>
-                        <div>
-                          <div className="text-sm font-bold text-gray-900">微信支付</div>
-                          <div className="text-xs text-gray-500">WeChat Pay · 安全快捷</div>
-                        </div>
-                        <div className="ml-auto flex items-center gap-1.5 text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">
-                          <Shield className="w-3.5 h-3.5" />
-                          <span className="text-[11px] font-semibold">已加密</span>
-                        </div>
-                      </div>
-
-                      {/* Payment Flow Steps */}
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-3 p-2.5 bg-white/80 rounded-xl">
-                          <div className="w-6 h-6 rounded-full bg-[#07C160] text-white flex items-center justify-center text-xs font-bold shrink-0">1</div>
-                          <span className="text-[13px] text-gray-700">点击「立即支付」生成付款二维码</span>
-                        </div>
-                        <div className="flex items-center gap-3 p-2.5 bg-white/80 rounded-xl">
-                          <div className="w-6 h-6 rounded-full bg-[#07C160] text-white flex items-center justify-center text-xs font-bold shrink-0">2</div>
-                          <span className="text-[13px] text-gray-700">打开微信「扫一扫」扫描二维码</span>
-                        </div>
-                        <div className="flex items-center gap-3 p-2.5 bg-white/80 rounded-xl">
-                          <div className="w-6 h-6 rounded-full bg-[#07C160] text-white flex items-center justify-center text-xs font-bold shrink-0">3</div>
-                          <span className="text-[13px] text-gray-700">确认支付后系统自动完成交付</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Payment Amount Preview */}
-                    <div className="flex items-center justify-between p-3.5 bg-gray-50 rounded-xl border border-gray-200">
-                      <span className="text-sm text-gray-600">支付金额</span>
-                      <div className="text-right">
-                        <div className="text-lg font-bold text-gray-900">
-                          <span className="text-sm text-gray-400 mr-0.5">¥</span>
-                          {useBalance ? finalPayAmountCNY : totalCNY}
-                        </div>
-                        <div className="text-[11px] text-gray-400">≈ ${useBalance ? finalPayAmount.toFixed(2) : totalUSD} USD</div>
-                      </div>
-                    </div>
-
-                    {renderPaymentFooter('#07C160')}
-                  </div>
-                )}
-
                 {/* ── Alipay Details ── */}
-                {paymentMethod === 'alipay' && (
+                {paymentMethod === 'stripe' && stripePaymentMethod === 'alipay' && (
                   <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300 px-1">
                     {/* Alipay Branding */}
                     <div className="p-4 rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50/60 to-blue-50/40">
@@ -2297,19 +1752,87 @@ const StaticResidentialPurchase = () => {
                       </div>
                     </div>
 
-                    {/* Payment Amount Preview */}
-                    <div className="flex items-center justify-between p-3.5 bg-gray-50 rounded-xl border border-gray-200">
-                      <span className="text-sm text-gray-600">支付金额</span>
-                      <div className="text-right">
-                        <div className="text-lg font-bold text-gray-900">
-                          <span className="text-sm text-gray-400 mr-0.5">¥</span>
-                          {useBalance ? finalPayAmountCNY : totalCNY}
+                    {renderPaymentFooter('#1677FF')}
+                  </div>
+                )}
+
+                {/* ── WeChat Pay Details ── */}
+                {paymentMethod === 'stripe' && stripePaymentMethod === 'wechat_pay' && (
+                  <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300 px-1">
+                    {/* WeChat Pay Branding */}
+                    <div className="p-4 rounded-2xl border border-green-100 bg-gradient-to-br from-green-50/60 to-emerald-50/40">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-10 h-10 rounded-xl bg-[#07C160] flex items-center justify-center shadow-sm shadow-green-200">
+                          <svg viewBox="0 0 576 512" className="w-6 h-6" fill="white" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M385.2 167.6c6.4 0 12.6.3 18.8 1.1C387.4 90.3 303.3 32 207.7 32 100.5 32 13 104.8 13 197.4c0 53.4 29.3 97.5 77.9 131.6l-19.3 58.6 68-34.1c24.4 4.8 43.8 9.7 68.2 9.7 6.2 0 12.1-.3 18.3-.8-3.8-13-5.9-26.8-5.9-41.2 0-87.8 79.2-154.2 165-154.2zm-104.5-52.9c14.5 0 24.2 9.7 24.2 24.4 0 14.5-9.7 24.2-24.2 24.2-14.8 0-29.3-9.7-29.3-24.2 0-14.8 14.5-24.4 29.3-24.4zm-136.4 48.6c-14.5 0-29.3-9.7-29.3-24.2 0-14.8 14.8-24.4 29.3-24.4 14.8 0 24.4 9.7 24.4 24.4 0 14.5-9.7 24.2-24.4 24.2zM563 319.4c0-77.9-77.9-141.3-165.4-141.3-92.7 0-165.4 63.4-165.4 141.3S305 460.7 397.6 460.7c19.3 0 38.9-4.8 58.6-9.7l53.4 29.3-14.8-48.6C534 402.1 563 363.2 563 319.4zm-219.1-24.5c-9.7 0-19.3-9.7-19.3-19.6 0-9.7 9.7-19.3 19.3-19.3 14.8 0 24.4 9.7 24.4 19.3 0 10-9.7 19.6-24.4 19.6zm107.1 0c-9.7 0-19.3-9.7-19.3-19.6 0-9.7 9.7-19.3 19.3-19.3 14.5 0 24.4 9.7 24.4 19.3 0 10-9.9 19.6-24.4 19.6z"/>
+                          </svg>
                         </div>
-                        <div className="text-[11px] text-gray-400">≈ ${useBalance ? finalPayAmount.toFixed(2) : totalUSD} USD</div>
+                        <div>
+                          <div className="text-sm font-bold text-gray-900">微信支付</div>
+                          <div className="text-xs text-gray-500">WeChat Pay · 安全快捷</div>
+                        </div>
+                        <div className="ml-auto flex items-center gap-1.5 text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">
+                          <Shield className="w-3.5 h-3.5" />
+                          <span className="text-[11px] font-semibold">已加密</span>
+                        </div>
+                      </div>
+
+                      {/* Payment Flow Steps */}
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-3 p-2.5 bg-white/80 rounded-xl">
+                          <div className="w-6 h-6 rounded-full bg-[#07C160] text-white flex items-center justify-center text-xs font-bold shrink-0">1</div>
+                          <span className="text-[13px] text-gray-700">点击「立即支付」生成付款二维码</span>
+                        </div>
+                        <div className="flex items-center gap-3 p-2.5 bg-white/80 rounded-xl">
+                          <div className="w-6 h-6 rounded-full bg-[#07C160] text-white flex items-center justify-center text-xs font-bold shrink-0">2</div>
+                          <span className="text-[13px] text-gray-700">打开微信「扫一扫」扫描二维码</span>
+                        </div>
+                        <div className="flex items-center gap-3 p-2.5 bg-white/80 rounded-xl">
+                          <div className="w-6 h-6 rounded-full bg-[#07C160] text-white flex items-center justify-center text-xs font-bold shrink-0">3</div>
+                          <span className="text-[13px] text-gray-700">确认支付后系统自动完成交付</span>
+                        </div>
                       </div>
                     </div>
 
-                    {renderPaymentFooter('#1677FF')}
+                    {renderPaymentFooter('#07C160')}
+                  </div>
+                )}
+
+                {/* ── Balance Details ── */}
+                {paymentMethod === 'balance' && (
+                  <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300 px-1">
+                    {/* Balance Branding */}
+                    <div className="p-4 rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50/60 to-teal-50/40">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-xl bg-[#10B981] flex items-center justify-center shadow-sm shadow-emerald-200">
+                          <Wallet className="w-6 h-6 text-white" />
+                        </div>
+                        <div>
+                          <div className="text-sm font-bold text-gray-900">余额支付</div>
+                          <div className="text-xs text-gray-500">使用账户余额直接支付</div>
+                        </div>
+                      </div>
+
+                      {/* Balance Info */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between p-3 bg-white/80 rounded-xl">
+                          <span className="text-[13px] text-gray-600">当前余额</span>
+                          <span className="text-[13px] font-semibold text-gray-900">
+                            ${(currentBalance !== null ? currentBalance : (user?.balance || 0)).toFixed(2)}
+                          </span>
+                        </div>
+                        {balanceDeduction > 0 && (
+                          <div className="flex items-center justify-between p-3 bg-emerald-50/80 rounded-xl">
+                            <span className="text-[13px] text-gray-600">本次扣款</span>
+                            <span className="text-[13px] font-semibold text-emerald-600">
+                              ${balanceDeduction.toFixed(2)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {renderPaymentFooter('#10B981')}
                   </div>
                 )}
 
@@ -2390,275 +1913,6 @@ const StaticResidentialPurchase = () => {
         amount={totalCNY}
         onComplete={() => { setIsProcessingPayment(false); alert('Purchase Successful!'); }}
       />
-
-      {/* ═══════════════ Purchase Guide Wizard Modal ═══════════════ */}
-      {showGuide && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center" style={{ animation: 'fadeIn 0.2s ease' }}>
-          {/* Backdrop */}
-          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setShowGuide(false)} />
-
-          {/* Modal */}
-          <div className="relative w-full max-w-lg mx-4 bg-white rounded-2xl shadow-2xl overflow-hidden" style={{ animation: 'slideUp 0.35s cubic-bezier(0.16,1,0.3,1)' }}>
-            
-            {/* Header */}
-            <div className="relative px-6 pt-6 pb-4 bg-gradient-to-br from-[#1A73E8]/5 via-blue-50/80 to-indigo-50/60">
-              <button onClick={() => setShowGuide(false)}
-                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/80 hover:bg-white shadow-sm flex items-center justify-center text-gray-400 hover:text-gray-600 transition-all"
-              >
-                <X className="w-4 h-4" />
-              </button>
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-xl bg-[#1A73E8] flex items-center justify-center shadow-sm shadow-blue-200">
-                  <Sparkles className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900">购买引导</h3>
-                  <p className="text-xs text-gray-500">分步向导帮您快速找到最优代理方案</p>
-                </div>
-              </div>
-              
-              {/* Step Indicators */}
-              <div className="flex items-center gap-1 mt-2">
-                {GUIDE_STEPS.map((s, i) => (
-                  <React.Fragment key={i}>
-                    <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all duration-300 ${
-                      i === guideStep ? 'bg-[#1A73E8] text-white shadow-sm shadow-blue-200' :
-                      i < guideStep ? 'bg-blue-100 text-[#1A73E8]' : 'bg-gray-100 text-gray-400'
-                    }`}>
-                      {i < guideStep ? <Check className="w-3 h-3" /> : <span>{i + 1}</span>}
-                      <span className="hidden sm:inline">{s.title}</span>
-                    </div>
-                    {i < GUIDE_STEPS.length - 1 && (
-                      <div className={`flex-1 h-0.5 rounded-full transition-colors duration-300 ${i < guideStep ? 'bg-[#1A73E8]/40' : 'bg-gray-200'}`} />
-                    )}
-                  </React.Fragment>
-                ))}
-              </div>
-            </div>
-
-            {/* Body */}
-            <div className="px-6 py-5 min-h-[280px]">
-              <div className="mb-4">
-                <h4 className="text-base font-semibold text-gray-900">{GUIDE_STEPS[guideStep].subtitle}</h4>
-              </div>
-
-              {/* Step 0: Scenario Selection */}
-              {guideStep === 0 && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5" style={{ animation: `${guideAnimDir === 'next' ? 'slideInRight' : 'slideInLeft'} 0.3s ease` }}>
-                  {GUIDE_SCENARIOS.map(s => (
-                    <button key={s.id}
-                      onClick={() => setGuideScenario(s.id)}
-                      className={`relative p-3.5 rounded-xl border-2 text-left transition-all duration-200 group ${
-                        guideScenario === s.id
-                          ? 'border-[#1A73E8] bg-blue-50/60 ring-2 ring-blue-100 shadow-sm'
-                          : 'border-gray-150 bg-white hover:border-blue-200 hover:bg-blue-50/30 hover:shadow-sm'
-                      }`}
-                    >
-                      {guideScenario === s.id && (
-                        <div className="absolute top-2 right-2">
-                          <Check className="w-4 h-4 text-[#1A73E8]" />
-                        </div>
-                      )}
-                      <div className="text-2xl mb-1.5">{s.icon}</div>
-                      <div className={`text-sm font-semibold mb-0.5 ${guideScenario === s.id ? 'text-[#1A73E8]' : 'text-gray-800'}`}>{s.label}</div>
-                      <div className="text-[11px] text-gray-400 leading-tight">{s.desc}</div>
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Step 1: Country Selection */}
-              {guideStep === 1 && (
-                <div style={{ animation: `${guideAnimDir === 'next' ? 'slideInRight' : 'slideInLeft'} 0.3s ease` }}>
-                  {/* Hot countries */}
-                  <div className="mb-3">
-                    <div className="text-xs text-gray-400 font-medium mb-2 flex items-center gap-1">
-                      <TrendingUp className="w-3 h-3" /> 热门地区
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {GUIDE_COUNTRIES.filter(c => c.hot).map(c => (
-                        <button key={c.id}
-                          onClick={() => setGuideCountry(c.id)}
-                          className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl border-2 transition-all duration-200 ${
-                            guideCountry === c.id
-                              ? 'border-[#1A73E8] bg-blue-50/60 ring-2 ring-blue-100 shadow-sm'
-                              : 'border-gray-150 bg-white hover:border-blue-200 hover:shadow-sm'
-                          }`}
-                        >
-                          <span className="text-lg">{c.flag}</span>
-                          <span className={`text-sm font-medium ${guideCountry === c.id ? 'text-[#1A73E8]' : 'text-gray-700'}`}>{c.label}</span>
-                          {guideCountry === c.id && <Check className="w-3.5 h-3.5 text-[#1A73E8]" />}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  {/* All countries */}
-                  <div>
-                    <div className="text-xs text-gray-400 font-medium mb-2 flex items-center gap-1">
-                      <Globe className="w-3 h-3" /> 全部地区
-                    </div>
-                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5 max-h-[160px] overflow-y-auto pr-1">
-                      {GUIDE_COUNTRIES.filter(c => !c.hot).map(c => (
-                        <button key={c.id}
-                          onClick={() => setGuideCountry(c.id)}
-                          className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg border transition-all duration-150 text-left ${
-                            guideCountry === c.id
-                              ? 'border-[#1A73E8] bg-blue-50/60 ring-1 ring-blue-100'
-                              : 'border-gray-100 bg-gray-50/50 hover:border-blue-200 hover:bg-blue-50/30'
-                          }`}
-                        >
-                          <span className="text-sm">{c.flag}</span>
-                          <span className={`text-xs font-medium truncate ${guideCountry === c.id ? 'text-[#1A73E8]' : 'text-gray-600'}`}>{c.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Step 2: Duration Selection */}
-              {guideStep === 2 && (
-                <div className="space-y-2" style={{ animation: `${guideAnimDir === 'next' ? 'slideInRight' : 'slideInLeft'} 0.3s ease` }}>
-                  {GUIDE_DURATIONS.map(d => (
-                    <button key={d.id}
-                      onClick={() => setGuideDuration(d.id)}
-                      className={`w-full flex items-center gap-3.5 p-3.5 rounded-xl border-2 text-left transition-all duration-200 ${
-                        guideDuration === d.id
-                          ? 'border-[#1A73E8] bg-blue-50/60 ring-2 ring-blue-100 shadow-sm'
-                          : 'border-gray-150 bg-white hover:border-blue-200 hover:shadow-sm'
-                      }`}
-                    >
-                      <span className="text-xl">{d.icon}</span>
-                      <div className="flex-1">
-                        <div className={`text-sm font-semibold ${guideDuration === d.id ? 'text-[#1A73E8]' : 'text-gray-800'}`}>{d.label}</div>
-                        <div className="text-xs text-gray-400">{d.desc}</div>
-                      </div>
-                      {guideDuration === d.id && (
-                        <div className="w-5 h-5 rounded-full bg-[#1A73E8] flex items-center justify-center">
-                          <Check className="w-3 h-3 text-white" />
-                        </div>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Step 3: Recommendation Result */}
-              {guideStep === 3 && (() => {
-                const scenarioObj = GUIDE_SCENARIOS.find(s => s.id === guideScenario);
-                const countryObj = GUIDE_COUNTRIES.find(c => c.id === guideCountry);
-                const durationObj = GUIDE_DURATIONS.find(d => d.id === guideDuration);
-                const rec = scenarioObj?.recommend || {};
-                const colorMap = {
-                  indigo: { bg: 'bg-indigo-50', border: 'border-indigo-200', text: 'text-indigo-700', tagBg: 'bg-indigo-100', tagText: 'text-indigo-600' },
-                  blue: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', tagBg: 'bg-blue-100', tagText: 'text-blue-600' },
-                  emerald: { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', tagBg: 'bg-emerald-100', tagText: 'text-emerald-600' },
-                  purple: { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-700', tagBg: 'bg-purple-100', tagText: 'text-purple-600' },
-                  slate: { bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-700', tagBg: 'bg-slate-100', tagText: 'text-slate-600' },
-                };
-                const clr = colorMap[rec.color] || colorMap.blue;
-
-                return (
-                  <div style={{ animation: 'slideInRight 0.3s ease' }}>
-                    {/* Summary chips */}
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gray-100 text-xs font-medium text-gray-600">
-                        {scenarioObj?.icon} {scenarioObj?.label}
-                      </span>
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gray-100 text-xs font-medium text-gray-600">
-                        {countryObj?.flag} {countryObj?.label}
-                      </span>
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gray-100 text-xs font-medium text-gray-600">
-                        {durationObj?.icon} {durationObj?.label}
-                      </span>
-                    </div>
-
-                    {/* Recommendation Card */}
-                    <div className={`rounded-xl border-2 ${clr.border} ${clr.bg} p-4 mb-4`}>
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className={`text-base font-bold ${clr.text}`}>{rec.title}</span>
-                          </div>
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md ${clr.tagBg} ${clr.tagText} text-[11px] font-semibold`}>
-                            <Star className="w-3 h-3" /> {rec.tag}
-                          </span>
-                        </div>
-                        <div className="w-10 h-10 rounded-xl bg-white/80 flex items-center justify-center shadow-sm">
-                          <Shield className="w-5 h-5 text-[#1A73E8]" />
-                        </div>
-                      </div>
-                      <p className="text-xs text-gray-600 leading-relaxed mb-3">{rec.desc}</p>
-                      <div className="space-y-1.5">
-                        {['100% 真实 ISP 原生住宅IP', '独享不共用，稳定不掉线', '支持 HTTP / SOCKS5 / WireGuard'].map((f, i) => (
-                          <div key={i} className="flex items-center gap-2 text-xs text-gray-600">
-                            <CheckCircle className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                            {f}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Config preview */}
-                    <div className="grid grid-cols-3 gap-2.5">
-                      <div className="p-2.5 bg-gray-50 rounded-lg border border-gray-100 text-center">
-                        <div className="text-[10px] text-gray-400 mb-0.5">地区</div>
-                        <div className="text-sm font-semibold text-gray-800">{countryObj?.flag} {countryObj?.label}</div>
-                      </div>
-                      <div className="p-2.5 bg-gray-50 rounded-lg border border-gray-100 text-center">
-                        <div className="text-[10px] text-gray-400 mb-0.5">计费模式</div>
-                        <div className="text-sm font-semibold text-gray-800">{rec.bandwidthMode === 'bandwidth' ? '独享带宽' : '流量包'}</div>
-                      </div>
-                      <div className="p-2.5 bg-gray-50 rounded-lg border border-gray-100 text-center">
-                        <div className="text-[10px] text-gray-400 mb-0.5">时长</div>
-                        <div className="text-sm font-semibold text-gray-800">{durationObj?.label}</div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-
-            {/* Footer */}
-            <div className="px-6 py-4 bg-gray-50/80 border-t border-gray-100 flex items-center justify-between">
-              <button
-                onClick={guideStep === 0 ? () => setShowGuide(false) : guidePrev}
-                className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                {guideStep === 0 ? '取消' : '上一步'}
-              </button>
-              <div>
-                {guideStep < 3 ? (
-                  <button
-                    onClick={guideNext}
-                    disabled={!guideCanNext()}
-                    className="px-5 py-2 text-sm font-semibold text-white bg-[#1A73E8] hover:bg-[#1557B0] rounded-lg shadow-sm shadow-blue-200 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1.5"
-                  >
-                    下一步
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                ) : (
-                  <button
-                    onClick={applyGuideResult}
-                    className="px-5 py-2 text-sm font-semibold text-white bg-[#1A73E8] hover:bg-[#1557B0] rounded-lg shadow-sm shadow-blue-200 transition-all flex items-center gap-1.5"
-                  >
-                    <Zap className="w-3.5 h-3.5" />
-                    应用推荐配置
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Inline animations */}
-          <style>{`
-            @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-            @keyframes slideUp { from { opacity: 0; transform: translateY(24px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
-            @keyframes slideInRight { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
-            @keyframes slideInLeft { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
-          `}</style>
-        </div>
-      )}
     </div>
   );
 };

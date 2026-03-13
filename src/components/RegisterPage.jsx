@@ -172,8 +172,12 @@ function RegisterPage() {
         if (loginData?.data?.accessToken) {
           localStorage.setItem('token', loginData.data.accessToken);
           localStorage.setItem('accessToken', loginData.data.accessToken);
-          if (loginData.data.user) localStorage.setItem('userInfo', JSON.stringify(loginData.data.user));
-          window.location.href = '/app/dashboard';
+          if (loginData.data.user) {
+            localStorage.setItem('userInfo', JSON.stringify(loginData.data.user));
+            // Also save to 'user' key for dashboard compatibility
+            localStorage.setItem('user', JSON.stringify(loginData.data.user));
+          }
+          window.location.href = '/dashboard';
           return;
         }
       } catch (_) { /* auto-login failed, redirect to login */ }

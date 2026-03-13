@@ -44,6 +44,8 @@ function LoginPage() {
         localStorage.setItem('accessToken', loginData.data.accessToken);
         if (loginData.data.user) {
           localStorage.setItem('userInfo', JSON.stringify(loginData.data.user));
+          // Also save to 'user' key for dashboard compatibility
+          localStorage.setItem('user', JSON.stringify(loginData.data.user));
         }
 
         // 记住我功能
@@ -57,7 +59,7 @@ function LoginPage() {
 
         // 跳转到主页或原来的页面
         const redirectUrl = new URLSearchParams(window.location.search).get('redirect');
-        window.location.href = redirectUrl || '/app/dashboard';
+        window.location.href = redirectUrl || '/dashboard';
       } else {
         throw new Error('登录失败，请检查账号密码');
       }

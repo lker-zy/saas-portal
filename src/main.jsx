@@ -10,6 +10,7 @@ import HomePage from './components/HomePage';
 import StaticResidentialPurchase from './components/StaticResidentialPurchase';
 import RegisterPage from './components/RegisterPage';
 import LoginPage from './components/LoginPage';
+import DashboardPage from './dashboard/DashboardApp'; // Use integrated dashboard
 import StaticISPPage from './components/StaticISPPage';
 import SolutionsPage from './components/SolutionsPage';
 import CompanyPage from './components/CompanyPage';
@@ -106,6 +107,18 @@ if (pathname === '/login' || hash === '#login') {
   root.render(
     <React.StrictMode>
       <LoginPage />
+    </React.StrictMode>
+  );
+}
+
+// ───── Route: /dashboard ─────
+if (pathname === '/dashboard') {
+  hideMainApp();
+  const mountEl = getMountPoint('dashboard-root');
+  const root = ReactDOM.createRoot(mountEl);
+  root.render(
+    <React.StrictMode>
+      <DashboardPage />
     </React.StrictMode>
   );
 }

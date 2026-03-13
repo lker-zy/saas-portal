@@ -2,6 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Dashboard CSS fixes - override external CSS for dashboard elements */
+#dashboard-root .ml-auto {
+  margin-left: auto !important;
+}
+
+#dashboard-root .gap-2 {
+  gap: 0.5rem !important;
+}
+
+#dashboard-root .gap-4 {
+  gap: 1rem !important;
+}
+
+#dashboard-root .flex {
+  display: flex !important;
+}
+
+#dashboard-root .items-center {
+  align-items: center !important;
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',

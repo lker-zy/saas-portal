@@ -164,7 +164,7 @@ function Navigation() {
           </button>
 
           {/* Logo */}
-          <div className="logo" onClick={() => window.location.href = '/'} style={{ cursor: 'pointer' }}>
+          <div className="logo" onClick={() => window.location.href = '/'}>
             量子代理
           </div>
 

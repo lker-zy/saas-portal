@@ -206,7 +206,7 @@ function RegisterPage() {
         backgroundRepeat: 'no-repeat',
       }}
     >
-      <div className="flex w-full max-w-[480px] md:max-w-[1230px] md:w-[80vw] lg:w-[64vw] my-auto items-stretch rounded-2xl md:rounded-lg">
+      <div className="flex w-full max-w-[480px] md:max-w-[1230px] md:w-[80vw] lg:w-[64vw] my-auto items-stretch rounded-2xl md:rounded-lg shadow-2xl">
         {/* ── Left: Image ── */}
         <div className="hidden md:block w-[45%] rounded-l-lg overflow-hidden">
           <img

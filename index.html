@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quantum Proxy - 量子代理</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700;900&display=swap">
+
+    <!-- Tailwind CSS -->
+    <link rel="stylesheet" href="/apps/portal/public/tailwind.css">
+
+    <!-- Application CSS -->
+    <link rel="stylesheet" href="/apps/portal/public/css/components.css">
+    <link rel="stylesheet" href="/apps/portal/public/css/footer.css">
+    <link rel="stylesheet" href="/apps/portal/public/css/global.css">
+
+    <script type="module" src="/apps/portal/main.jsx"></script>
+  </head>
+
+  <body>
+    <!-- Page transition overlay -->
+    <div id="page-transition-overlay">
+      <div class="transition-spinner">
+        <div class="spinner-ring"></div>
+        <div class="spinner-text">正在加载...</div>
+      </div>
+    </div>
+
+    <!-- React mount points -->
+    <div id="root"></div>
+    <div id="isp-root" style="display:none;"></div>
+
+    <!-- Quantum Proxy Footer -->
+    <footer class="quantum-footer">
+      <div class="footer-content">
+        <div class="footer-links">
+          <a href="/?tab=privacy">Privacy Policy</a>
+          <a href="/?tab=terms">Terms of Service</a>
+          <a href="/?tab=refund">Refund Policy</a>
+        </div>
+        <div class="footer-text">
+          <div class="footer-copyright">&copy; 2026 Quantum Proxy. All rights reserved.</div>
+          <div class="footer-disclaimer">This platform provides data services only and does not constitute investment advice.</div>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Help Center Page -->
+    <div id="help-center-page" class="help-center-page">
+      <!-- ... (content omitted for brevity) ... -->
+    </div>
+  </body>
+</html>
+

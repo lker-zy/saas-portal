@@ -110,7 +110,7 @@ function RegisterPage() {
 
     setIsSending(true);
     try {
-      const resp = await fetch('/api/client/send-verification-code', {
+      const resp = await fetch('/client/send-verification-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
@@ -153,7 +153,7 @@ function RegisterPage() {
     try {
       const regBody = { email, password, verificationCode };
       if (phone.trim()) regBody.phone = `${countryCode}${phone}`;
-      const regResp = await fetch('/api/client/register', {
+      const regResp = await fetch('/client/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(regBody),
@@ -163,7 +163,7 @@ function RegisterPage() {
 
       // Auto login
       try {
-        const loginResp = await fetch('/api/client/login', {
+        const loginResp = await fetch('/client/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password }),

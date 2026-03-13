@@ -164,7 +164,7 @@ function Navigation() {
           </button>
 
           {/* Logo */}
-          <div className="logo" onClick={() => window.location.href = '/'}>
+          <div className="logo">
             量子代理
           </div>
 

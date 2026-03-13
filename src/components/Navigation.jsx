@@ -180,10 +180,12 @@ function Navigation({ mobileMenuOpen, onToggleMobileMenu, onCloseMobileMenu }) {
                 </a>
               )
             ))}
-            <button className="login-btn" onClick={() => window.location.href = '/login#/login'}>
-              注册/登录
-            </button>
           </nav>
+
+          {/* Login Button - outside nav-menu for language switcher insertion */}
+          <button className="login-btn" onClick={() => window.location.href = '/login#/login'}>
+            注册/登录
+          </button>
         </div>
       </header>
 

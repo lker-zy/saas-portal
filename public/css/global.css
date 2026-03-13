@@ -133,24 +133,24 @@
 /* 优化标题样式 */
 .hero-section h1,
 .hero-section [class*="hero-title"] {
-  font-size: 96px !important;
-  font-weight: 700 !important;
-  letter-spacing: 2px !important;
+  font-size: clamp(48px, 8vw, 96px) !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.02em !important;
   text-shadow: 0 4px 30px rgba(0,0,0,0.3);
-  background: linear-gradient(135deg, #fff, #a8b8ff) !important;
+  background: linear-gradient(135deg, #ffffff 0%, #e0e8ff 50%, #a8c0ff 100%) !important;
   -webkit-background-clip: text !important;
   -webkit-text-fill-color: transparent !important;
   background-clip: text !important;
-  line-height: 1.3 !important;
+  line-height: 1.2 !important;
   animation: heroTitleFadeIn 1s ease-out forwards;
 }
 
 /* 优化副标题 */
 .hero-section [class*="hero-subtitle"],
 .hero-section h1 + div {
-  font-size: 28px !important;
-  letter-spacing: 20px !important;
-  color: #fff !important;
+  font-size: clamp(18px, 2.5vw, 28px) !important;
+  letter-spacing: 0.15em !important;
+  color: rgba(255,255,255,0.9) !important;
   text-shadow: 0 2px 10px rgba(0,0,0,0.3);
   animation: heroSubtitleFadeIn 1s ease-out 0.3s forwards;
   opacity: 0;
@@ -159,18 +159,18 @@
 /* CTA 按钮优化 */
 .hero-section button,
 .cta-button {
-  background: #2f73f2 !important;
+  background: linear-gradient(135deg, #4F8EFF 0%, #2563eb 50%, #1d4ed8 100%) !important;
   border: none !important;
-  border-radius: 54px !important;
-  width: 490px !important;
-  height: 98px !important;
-  padding: 16px 48px !important;
-  font-size: 40px !important;
+  border-radius: 60px !important;
+  padding: 18px 48px !important;
+  font-size: clamp(16px, 2vw, 24px) !important;
   font-weight: 600 !important;
-  letter-spacing: 8px !important;
+  letter-spacing: 0.1em !important;
   color: #fff !important;
   cursor: pointer;
   transition: transform 0.3s, box-shadow 0.3s !important;
+  width: auto !important;
+  box-shadow: 0 10px 40px rgba(37, 99, 235, 0.4), 0 0 0 0 rgba(79, 142, 255, 0.4) !important;
   animation: heroBtnFadeIn 1s ease-out 0.6s forwards;
   opacity: 0;
 }

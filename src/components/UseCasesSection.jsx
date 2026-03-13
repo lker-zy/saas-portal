@@ -1,68 +1,54 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const useCaseData = [
   {
     id: 'ecommerce',
     name: '电商运营',
-    icon: '🛒',
-    title: '电商矩阵运营',
-    desc: '使用静态住宅IP，实现多账号矩阵运营，防止账号关联，提升运营效率。',
-    btnText: '了解更多',
-    href: '/?tab=cross_border_ecommerce'
+    title: '电商运营',
+    desc: '使用静态住宅isp、电商运营 多账号矩阵运营的护航者',
+    img: ''
   },
   {
     id: 'live',
     name: '在线直播',
-    icon: '📺',
-    title: '全球直播加速',
-    desc: '高速稳定的网络连接，确保直播画面流畅不卡顿，助力全球直播业务拓展。',
-    btnText: '了解更多',
-    href: '/?tab=ai_data_mining'
+    title: '在线直播',
+    desc: '高速稳定的网络连接，确保直播画面流畅不卡顿，助力全球直播业务。',
+    img: '/assets/scene-live.png'
   },
   {
     id: 'data',
-    name: '数据分析',
-    icon: '📊',
-    title: '市场数据洞察',
+    name: '数据分析与市场研究',
+    title: '数据分析与市场研究',
     desc: '轻松获取全球市场数据，精准分析竞品动态，为业务决策提供强有力的数据支持。',
-    btnText: '了解更多',
-    href: '/?tab=stock_market'
+    img: '/assets/scene-analysis.png'
   },
   {
     id: 'ai',
-    name: 'AI数据采集',
-    icon: '🤖',
-    title: 'AI模型训练',
+    name: 'AI访问与数据',
+    title: 'AI访问与数据',
     desc: '解锁AI模型地域限制，高效采集训练数据，赋能人工智能应用开发与落地。',
-    btnText: '了解更多',
-    href: '/?tab=ai_data_mining'
+    img: '/assets/scene-ai.png'
   },
   {
     id: 'social',
-    name: '社媒运营',
-    icon: '💬',
-    title: '社交媒体管理',
+    name: '社交媒体运营',
+    title: '社交媒体运营',
     desc: '轻松管理全球社交媒体账号，突破地域限制，实现多账号安全运营与增长。',
-    btnText: '了解更多',
-    href: '/?tab=ai_data_mining'
+    img: '/assets/scene-social.png'
   },
   {
     id: 'web3',
     name: 'WEB3应用',
-    icon: '⛓️',
-    title: '去中心化网络',
+    title: 'WEB3应用',
     desc: '安全连接去中心化网络，保障数字资产交易安全，探索Web3无限可能。',
-    btnText: '了解更多',
-    href: '/?tab=ai_data_mining'
+    img: '/assets/scene-web3.png'
   },
   {
     id: 'bot',
-    name: '智能爬虫',
-    icon: '🕷️',
-    title: '数据采集工具',
+    name: '限量抢购BOT&智能爬虫',
+    title: '限量抢购BOT&智能爬虫',
     desc: '毫秒级响应速度，高并发支持，助力抢购业务成功，高效采集全网数据。',
-    btnText: '了解更多',
-    href: '/?tab=smart_crawler'
+    img: '/assets/scene-bot.png'
   }
 ];
 
@@ -71,9 +57,29 @@ function UseCasesSection() {
 
   const currentCase = useCaseData.find(c => c.id === activeTab) || useCaseData[0];
 
+  useEffect(() => {
+    // 初始化 tab 切换功能（模拟原版 videoBackground.js 的功能）
+    const handleTabClick = (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+
+      const tabName = btn.textContent.trim();
+      const matchedCase = useCaseData.find(c => c.name === tabName);
+      if (matchedCase) {
+        setActiveTab(matchedCase.id);
+      }
+    };
+
+    const tabsContainer = document.querySelector('.use-cases-tabs');
+    if (tabsContainer) {
+      tabsContainer.addEventListener('click', handleTabClick);
+      return () => tabsContainer.removeEventListener('click', handleTabClick);
+    }
+  }, []);
+
   return (
     <section className="use-cases-section">
-      <h2 className="section-title">应用场景</h2>
+      <h2 className="section-title">在什么场景中能使用到？</h2>
 
       {/* Tab Buttons */}
       <div className="use-cases-tabs">
@@ -81,9 +87,8 @@ function UseCasesSection() {
           <button
             key={useCase.id}
             className={`tab-btn ${activeTab === useCase.id ? 'active force-tab-active' : 'force-tab-inactive'}`}
-            onClick={() => setActiveTab(useCase.id)}
           >
-            {useCase.icon} {useCase.name}
+            {useCase.name}
           </button>
         ))}
       </div>
@@ -92,24 +97,26 @@ function UseCasesSection() {
       <div className="use-case-content">
         {/* Left: Text Content */}
         <div className="use-case-text">
-          <div className="case-icon">{currentCase.icon}</div>
           <h3>{currentCase.title}</h3>
           <p>{currentCase.desc}</p>
-          <button
-            className="learn-more-btn"
-            onClick={() => window.location.href = currentCase.href}
-          >
-            {currentCase.btnText}
-          </button>
+          <button className="learn-more-btn">了解更多</button>
         </div>
 
         {/* Right: Illustration */}
         <div className="use-case-illustration">
-          <img
-            src="/assets/home1-DPH3jV-n.png"
-            alt={currentCase.name}
-            className="illustration-img"
-          />
+          {currentCase.img ? (
+            <img
+              src={currentCase.img}
+              alt={currentCase.name}
+              className="tab-content-img"
+            />
+          ) : (
+            <img
+              src="/assets/home2-D-tg2ggl.png"
+              alt={currentCase.name}
+              className="illustration-img"
+            />
+          )}
         </div>
       </div>
     </section>

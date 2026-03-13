@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from 'react';
 
+const caseIconSvg = (
+  <svg width="60" height="60" viewBox="0 0 60 60" fill="none">
+    <circle cx="30" cy="30" r="30" fill="#4A90E2"></circle>
+    <path d="M25 20h10c2.21 0 4 1.79 4 4v12c0 2.21-1.79 4-4 4H25c-2.21 0-4-1.79-4-4V24c0-2.21 1.79-4 4-4z" stroke="white" strokeWidth="2" fill="none"></path>
+    <path d="M27 28h6M27 32h4" stroke="white" strokeWidth="2" strokeLinecap="round"></path>
+  </svg>
+);
+
 const useCaseData = [
   {
     id: 'ecommerce',
@@ -97,6 +105,7 @@ function UseCasesSection() {
       <div className="use-case-content">
         {/* Left: Text Content */}
         <div className="use-case-text">
+          <div className="case-icon">{caseIconSvg}</div>
           <h3>{currentCase.title}</h3>
           <p>{currentCase.desc}</p>
           <button className="learn-more-btn">了解更多</button>

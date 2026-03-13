@@ -10,7 +10,7 @@ import HomePage from './components/HomePage';
 import StaticResidentialPurchase from './components/StaticResidentialPurchase';
 import RegisterPage from './components/RegisterPage';
 import LoginPage from './components/LoginPage';
-import DashboardPage from './dashboard/DashboardApp'; // Use integrated dashboard
+import { loadDashboardSPA } from './utils/dashboardLoader';
 import StaticISPPage from './components/StaticISPPage';
 import SolutionsPage from './components/SolutionsPage';
 import CompanyPage from './components/CompanyPage';
@@ -112,15 +112,10 @@ if (pathname === '/login' || hash === '#login') {
 }
 
 // ───── Route: /dashboard ─────
+// Dashboard 作为独立 SPA，使用动态 HTML 加载
 if (pathname === '/dashboard') {
-  hideMainApp();
-  const mountEl = getMountPoint('dashboard-root');
-  const root = ReactDOM.createRoot(mountEl);
-  root.render(
-    <React.StrictMode>
-      <DashboardPage />
-    </React.StrictMode>
-  );
+  console.log('[Main] === DASHBOARD ROUTE - Loading as independent SPA ===');
+  loadDashboardSPA();
 }
 
 // ───── Route: Purchase pages (all product types) ─────

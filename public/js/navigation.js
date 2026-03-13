@@ -9,6 +9,9 @@
     if (!navMenus || navMenus.length === 0) return;
 
     navMenus.forEach(function(navMenu) {
+      // 跳过React渲染的主页header（检查是否在home-container内）
+      if (navMenu.closest('.home-container')) return;
+
       // 如果该 nav-menu 已经有"商务合作"则跳过
       var existingText = navMenu.textContent || '';
       if (existingText.indexOf('商务合作') !== -1) return;
@@ -54,6 +57,8 @@
     var injectedAny = false;
 
     headerNavs.forEach(function(headerNav) {
+      // 跳过React渲染的主页header（检查是否在home-container内）
+      if (headerNav.closest('.home-container')) return;
       var dropdowns = headerNav.querySelectorAll('.dropdown');
       
       // 遍历每个下拉框容器
@@ -320,6 +325,13 @@
       }
     }
     if (!header) return;
+
+    // 跳过React渲染的主页header（检查是否在home-container内）
+    if (header.closest('.home-container')) {
+      header.dataset.mobileMenuInit = 'true'; // 标记为已处理，避免重复检查
+      return;
+    }
+
     header.dataset.mobileMenuInit = 'true';
 
     // 创建汉堡按钮

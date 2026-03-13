@@ -4711,8 +4711,8 @@ html {
 
 /* Quick Start Section */
 .quick-start-section {
-  padding: 100px 80px;
-  background: #f8fafc;
+  padding: 0;
+  background: #fff;
   text-align: center;
   background-size: cover;
   background-position: center;

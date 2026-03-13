@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import path from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -53,14 +54,20 @@ export default defineConfig({
       },
     },
   },
-  publicDir: 'public',
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './apps/portal/src'),
+      '@dashboard': path.resolve(__dirname, './apps/dashboard/src'),
+      '@shared': path.resolve(__dirname, './packages'),
+    },
+  },
   build: {
     outDir: 'build',
     emptyOutDir: true,
     rollupOptions: {
       input: {
-        main: './index.html',
-        dashboard: './src/dashboard/index.html',
+        portal: './apps/portal/index.html',
+        dashboard: './apps/dashboard/index.html',
       },
     },
   },

@@ -4,7 +4,7 @@
  */
 
 // Dashboard 入口 URL
-const DASHBOARD_ENTRY_URL = '/src/dashboard/index.html';
+const DASHBOARD_ENTRY_URL = '/apps/dashboard/index.html';
 
 /**
  * 加载 dashboard 为独立 SPA

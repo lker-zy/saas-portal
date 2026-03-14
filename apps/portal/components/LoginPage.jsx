@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import './RegisterPage.css'; // 复用注册页面的样式
 
 function LoginPage() {
   const [email, setEmail] = useState('');
@@ -104,7 +103,7 @@ function LoginPage() {
         <div className="hidden md:block w-[45%] rounded-l-lg overflow-hidden">
           <img
             src="/assets/intro-DrSfAFvm.png"
-            alt="Quantum Proxy"
+            alt="IPSaaS"
             className="w-full h-full object-cover"
           />
         </div>
@@ -113,7 +112,7 @@ function LoginPage() {
         <div className="flex-1 p-5 sm:p-6 md:p-8 lg:p-10 flex flex-col justify-center bg-white rounded-2xl md:rounded-r-lg md:rounded-l-none">
           {/* Header */}
           <div className="flex justify-between items-center mb-4 sm:mb-5">
-            <h2 className="text-xl sm:text-2xl font-semibold text-gray-800">账号登录</h2>
+            <h2 className="text-xl sm:text-2xl font-semibold text-gray-800">登录</h2>
             <a
               href="/register"
               onClick={(e) => { e.preventDefault(); goRegister(); }}

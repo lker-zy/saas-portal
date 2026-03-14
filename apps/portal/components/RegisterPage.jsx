@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import SliderCaptcha from './SliderCaptcha';
-import './RegisterPage.css';
 
 /* ─────── Country code data ─────── */
 const COUNTRY_CODES = [

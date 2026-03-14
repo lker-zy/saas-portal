@@ -100,7 +100,7 @@ if (pathname === '/register') {
 }
 
 // ───── Route: /login or /#login ─────
-if (pathname === '/login' || hash === '#login') {
+if (pathname === '/login' || hash === '#login' || hash === '#/login') {
   hideMainApp();
   const mountEl = getMountPoint('login-root');
   const root = ReactDOM.createRoot(mountEl);

@@ -405,12 +405,17 @@
 
   // ── Insert Switcher into Header / ISP Page / Help Center ──
   function insertSwitcher() {
-    if (document.getElementById('lang-switcher')) return true;
+    console.log('[LanguageSwitcher] insertSwitcher() called');
+    if (document.getElementById('lang-switcher')) {
+      console.log('[LanguageSwitcher] Switcher already exists');
+      return true;
+    }
 
     // Check if we are on any purchase page (tab=purchase)
     var search = window.location.search || '';
     var params = new URLSearchParams(search);
     var isPurchasePage = params.get('tab') === 'purchase';
+    console.log('[LanguageSwitcher] isPurchasePage:', isPurchasePage);
 
     if (isPurchasePage) {
       var ispAnchor = document.getElementById('isp-lang-anchor');
@@ -466,10 +471,18 @@
 
     // Default: insert into home page header
     var headerContent = document.querySelector('.header-content');
-    if (!headerContent) return false;
+    console.log('[LanguageSwitcher] Looking for .header-content:', !!headerContent);
+    if (!headerContent) {
+      console.log('[LanguageSwitcher] .header-content not found');
+      return false;
+    }
 
     var loginBtn = headerContent.querySelector('.login-btn');
-    if (!loginBtn) return false;
+    console.log('[LanguageSwitcher] Looking for .login-btn:', !!loginBtn);
+    if (!loginBtn) {
+      console.log('[LanguageSwitcher] .login-btn not found');
+      return false;
+    }
 
     var sw = createSwitcher();
     headerContent.insertBefore(sw, loginBtn);
@@ -484,6 +497,10 @@
 
   // ── Init with MutationObserver ──
   function init() {
+    console.log('[LanguageSwitcher] init() called');
+    console.log('[LanguageSwitcher] pathname:', window.location.pathname);
+    console.log('[LanguageSwitcher] root exists:', !!document.getElementById('root'));
+
     // Restore scroll position if returning from ISP page
     var shouldRestore = sessionStorage.getItem('should_restore_scroll');
     var scrollPos = sessionStorage.getItem('home_scroll_pos');
@@ -503,21 +520,34 @@
     var params = new URLSearchParams(search);
     var isPurchasePage = params.get('tab') === 'purchase';
 
-    if (isPurchasePage) {
-      // For purchase pages, wait for React component to render
+    // Check if this is a React-rendered home page
+    var pathname = window.location.pathname;
+    var isReactHomePage = (pathname === '/' || pathname === '') && document.getElementById('root');
+
+    console.log('[LanguageSwitcher] isReactHomePage:', isReactHomePage, 'isPurchasePage:', isPurchasePage);
+
+    if (isReactHomePage || isPurchasePage) {
+      // For React-rendered pages, wait for React component to render
       // Try multiple times with increasing delays
       var attempts = 0;
-      var maxAttempts = 20; // Try for up to 2 seconds (20 * 100ms)
-      
-      function tryInsertPurchaseSwitcher() {
+      var maxAttempts = 30; // Try for up to 3 seconds (30 * 100ms)
+
+      function tryInsertReactSwitcher() {
         attempts++;
+        console.log('[LanguageSwitcher] tryInsertReactSwitcher() attempt:', attempts);
+
+        var headerContent = document.querySelector('.header-content');
+        var loginBtn = headerContent ? headerContent.querySelector('.login-btn') : null;
+        console.log('[LanguageSwitcher] headerContent:', !!headerContent, 'loginBtn:', !!loginBtn);
+
         if (insertSwitcher()) {
+          console.log('[LanguageSwitcher] Switcher inserted successfully!');
           startContentWatcher();
           return;
         }
-        
+
         if (attempts < maxAttempts) {
-          setTimeout(tryInsertPurchaseSwitcher, 100);
+          setTimeout(tryInsertReactSwitcher, 100);
         } else {
           // Fallback: use MutationObserver
           var observer = new MutationObserver(function() {
@@ -527,18 +557,18 @@
             }
           });
           observer.observe(document.body, { childList: true, subtree: true });
-          
+
           // Final safety fallback
           setTimeout(function() {
             observer.disconnect();
             insertSwitcher();
             startContentWatcher();
-          }, 3000);
+          }, 5000);
         }
       }
-      
+
       // Start trying immediately, then retry
-      tryInsertPurchaseSwitcher();
+      tryInsertReactSwitcher();
       return;
     }
 
@@ -764,9 +794,15 @@
   });
 
   // ── Start ──
+  // Wait for DOMContentLoaded to ensure React has started rendering
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('[LanguageSwitcher] DOMContentLoaded fired');
+      // Additional delay to let React start rendering
+      setTimeout(init, 100);
+    });
   } else {
-    init();
+    console.log('[LanguageSwitcher] Document already ready, adding small delay');
+    setTimeout(init, 100);
   }
 })();

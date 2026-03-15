@@ -550,6 +550,35 @@ export const orderService = {
   },
 
   /**
+   * 查询折扣信息
+   * @param {Object} params - 折扣查询参数
+   * @returns {Promise} 折扣信息
+   */
+  async getDiscount(params) {
+    try {
+      const response = await orderAPI.getDiscount(params);
+
+      if (response.code === 200 || response.code === 0) {
+        return {
+          success: true,
+          data: response.data,
+        };
+      } else {
+        return {
+          success: false,
+          message: response.message || '获取折扣信息失败',
+        };
+      }
+    } catch (error) {
+      console.error('Get discount service error:', error);
+      return {
+        success: false,
+        message: error.message || '获取折扣信息失败，请稍后重试',
+      };
+    }
+  },
+
+  /**
    * 格式化订单状态显示
    * @param {string} status - 订单状态
    * @returns {string} 中文状态

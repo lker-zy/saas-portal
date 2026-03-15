@@ -3,10 +3,11 @@ import {
   Globe, ShoppingCart, Share2, Database, Smartphone, Server, Wifi,
   CheckCircle, Zap, Shield, ArrowRight, CreditCard, Box, ChevronDown, Check, Info, Minus, Plus, Monitor, Terminal,
   Bell, X, Mail, Copy, Loader2, QrCode, Wallet, HelpCircle, Lock, Tag, Sparkles, ChevronRight, Star, TrendingUp, Package,
-  AlertCircle, AlertTriangle
+  AlertCircle, AlertTriangle, Gift
 } from 'lucide-react';
 import { productService } from '../services/productService';
 import { paymentService } from '../services/paymentService';
+import orderService from '../services/orderService';
 import { StripePaymentMethodSelector } from './StripePaymentMethodSelector';
 import { useAuth } from '../contexts/AuthContext';
 import { usePurchaseFlow } from '../hooks/usePurchaseFlow';
@@ -577,6 +578,10 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
   const [couponError, setCouponError] = useState('');
   const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
 
+  // 邀请码折扣信息
+  const [discountInfo, setDiscountInfo] = useState(null);     // { originalAmount, finalAmount, totalDiscount, discounts, appliedDiscounts }
+  const [isLoadingDiscount, setIsLoadingDiscount] = useState(false);
+
   // 支付方式图标映射（从 iconType 到 React 组件）
   const getPaymentMethodIcon = (iconType) => {
     switch (iconType) {
@@ -739,6 +744,51 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
   const totalUSDValue = calculateTotal();
   const totalCNYValue = totalUSDValue * 7.2;
 
+  // 获取折扣信息（当选择变化时自动查询）
+  useEffect(() => {
+    const fetchDiscount = async () => {
+      if (!selectedRegion || selectedScenarios.length === 0 || totalUSDValue <= 0) {
+        setDiscountInfo(null);
+        return;
+      }
+
+      setIsLoadingDiscount(true);
+      try {
+        const durationDays = purchaseType === 'subscription'
+          ? selectedCycle?.days
+          : (selectedDuration?.days ?? customDurationDays);
+
+        const result = await orderService.getDiscount({
+          orderType: 'static',
+          country: selectedRegion.id,
+          scenario: selectedScenarios[0]?.id || 'ecommerce',
+          amount: totalUSDValue,
+          quantity: quantity,
+          duration: durationDays || 30,
+          couponCode: couponApplied?.code || '',
+        });
+
+        if (result.success) {
+          setDiscountInfo(result.data);
+        } else {
+          setDiscountInfo(null);
+        }
+      } catch (error) {
+        console.error('Failed to fetch discount:', error);
+        setDiscountInfo(null);
+      } finally {
+        setIsLoadingDiscount(false);
+      }
+    };
+
+    // 防抖处理，避免频繁请求
+    const timeoutId = setTimeout(() => {
+      fetchDiscount();
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [selectedRegion, selectedScenarios, quantity, selectedDuration, selectedCycle, purchaseType, customDurationDays, totalUSDValue, couponApplied]);
+
   // 购买处理函数
   const handlePurchase = async () => {
     if (!selectedRegion || !selectedSku) {
@@ -805,30 +855,37 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
   let balanceDeduction = 0;
   let finalPayAmount = totalUSDValue;
 
-  // Coupon / Credit Discount Logic
+  // 获取服务器计算的折扣（包含邀请码、时长折扣等）
+  const serverTotalDiscount = discountInfo?.totalDiscount || 0;
+
+  // Coupon / Credit Discount Logic (前端优惠券)
   const couponDiscountUSD = couponApplied
     ? (couponApplied.fixedDiscount
         ? Math.min(couponApplied.fixedDiscount, totalUSDValue)
         : totalUSDValue * (couponApplied.discountPercent / 100))
     : 0;
-  const afterCouponUSD = totalUSDValue - couponDiscountUSD;
-  const afterCouponCNY = afterCouponUSD * 7.2;
 
-  // Recalculate balance deduction based on after-coupon amount
+  // 总折扣 = 服务器折扣（邀请码+时长）+ 前端优惠券
+  const totalDiscountUSD = serverTotalDiscount + couponDiscountUSD;
+  const afterDiscountUSD = totalUSDValue - totalDiscountUSD;
+  const afterDiscountCNY = afterDiscountUSD * 7.2;
+
+  // Recalculate balance deduction based on after-discount amount
   if (paymentMethod === 'balance') {
-    if (userBalance >= afterCouponUSD) {
-      balanceDeduction = afterCouponUSD;
+    if (userBalance >= afterDiscountUSD) {
+      balanceDeduction = afterDiscountUSD;
       finalPayAmount = 0;
     } else {
       balanceDeduction = userBalance;
-      finalPayAmount = afterCouponUSD - userBalance;
+      finalPayAmount = afterDiscountUSD - userBalance;
     }
   } else {
-    finalPayAmount = afterCouponUSD;
+    finalPayAmount = afterDiscountUSD;
   }
 
   const totalCNY = totalCNYValue.toFixed(2);
   const totalUSD = totalUSDValue.toFixed(2);
+  const serverDiscountCNY = (serverTotalDiscount * 7.2).toFixed(2);
   const couponDiscountCNY = (couponDiscountUSD * 7.2).toFixed(2);
   const balanceDeductionCNY = (balanceDeduction * 7.2).toFixed(2);
   const finalPayAmountCNY = (finalPayAmount * 7.2).toFixed(2);
@@ -1460,6 +1517,25 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
                       <span className="tabular-nums">≈ ${totalUSD} USD</span>
                     </div>
 
+                    {/* Server-side discounts (Invite code, duration, etc.) */}
+                    {discountInfo?.discounts && discountInfo.discounts.length > 0 && discountInfo.discounts.map((discount, index) => (
+                      <div key={`discount-${index}`} className="flex justify-between items-start px-4 py-2.5 text-[13px] bg-green-50/30">
+                        <div className="text-emerald-700 flex flex-col gap-0.5">
+                          <div className="flex items-center gap-1.5">
+                            {discount.name}
+                          </div>
+                          {discount.description && (
+                            <div className="text-[11px] text-emerald-600/70 pl-0">
+                              {discount.description}
+                            </div>
+                          )}
+                        </div>
+                        <span className="font-medium text-emerald-700 tabular-nums mt-0.5">
+                          − ¥{(discount.discountAmount * 7.2).toFixed(2)}
+                        </span>
+                      </div>
+                    ))}
+
                     {/* Coupon / Credit discount */}
                     {couponApplied && (
                       <div className="flex justify-between items-center px-4 py-2.5 text-[13px] bg-blue-50/30">
@@ -1493,17 +1569,17 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
                   <div className="flex justify-between items-end px-4 py-3 bg-gray-50 border-t border-gray-200">
                     <div>
                       <div className="text-[12px] font-semibold text-gray-500 uppercase tracking-wider">
-                        {(paymentMethod === 'balance' || couponApplied) ? '应付金额' : '合计'}
+                        {(paymentMethod === 'balance' || couponApplied || discountInfo?.totalDiscount > 0) ? '应付金额' : '合计'}
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className={`font-bold tracking-tight tabular-nums ${(paymentMethod === 'balance' || couponApplied) ? 'text-xl text-[#1A73E8]' : 'text-xl text-gray-900'}`}>
+                      <div className={`font-bold tracking-tight tabular-nums ${(paymentMethod === 'balance' || couponApplied || discountInfo?.totalDiscount > 0) ? 'text-xl text-[#1A73E8]' : 'text-xl text-gray-900'}`}>
                         <span className="text-sm mr-0.5 opacity-60">¥</span>
-                        {(paymentMethod === 'balance' || couponApplied) ? finalPayAmountCNY : totalCNY}
+                        {(paymentMethod === 'balance' || couponApplied || discountInfo?.totalDiscount > 0) ? finalPayAmountCNY : totalCNY}
                       </div>
-                      {(paymentMethod === 'balance' || couponApplied) && (
+                      {(paymentMethod === 'balance' || couponApplied || discountInfo?.totalDiscount > 0) && (
                         <div className="text-[11px] text-gray-400 mt-0.5 tabular-nums">
-                          ≈ ${(paymentMethod === 'balance' || couponApplied) ? (finalPayAmount).toFixed(2) : totalUSD} USD
+                          ≈ ${(paymentMethod === 'balance' || couponApplied || discountInfo?.totalDiscount > 0) ? (finalPayAmount).toFixed(2) : totalUSD} USD
                         </div>
                       )}
                     </div>
@@ -1530,8 +1606,8 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
                       <button key={method.id}
                         onClick={() => setPaymentMethod(method.id)}
                         className={`relative flex flex-col items-start justify-center gap-1.5 py-2.5 pl-3 rounded-xl border transition-all duration-200 ${
-                          isActive 
-                            ? 'border-[#1A73E8] bg-blue-50/50 text-blue-600 shadow-sm ring-1 ring-blue-500/20' 
+                          isActive
+                            ? 'border-[#1A73E8] bg-blue-50/50 text-blue-600 shadow-sm ring-1 ring-blue-500/20'
                             : 'border-gray-200 hover:border-gray-300 bg-white text-gray-600 hover:bg-gray-50/50'
                         }`}
                       >

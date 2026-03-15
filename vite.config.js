@@ -36,6 +36,11 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/client/, '/client'),
       },
+      // Direct client routes (for register page)
+      '/client': {
+        target: 'http://127.0.0.1:8081',
+        changeOrigin: true,
+      },
       // Payment service (port 8892)
       '/api/payment': {
         target: 'http://localhost:8892',

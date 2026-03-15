@@ -41,8 +41,18 @@ function RegisterPage() {
   const [showPwd, setShowPwd] = useState(false);
   const [showConfirmPwd, setShowConfirmPwd] = useState(false);
   const [captchaVerified, setCaptchaVerified] = useState(false);
+  const [inviteCode, setInviteCode] = useState('');
   const timerRef = useRef(null);
   const dropdownRef = useRef(null);
+
+  // 从 URL 参数中自动填充邀请码
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('invite') || urlParams.get('code') || urlParams.get('ref');
+    if (code) {
+      setInviteCode(code);
+    }
+  }, []);
 
   // Cleanup timer
   useEffect(() => () => { if (timerRef.current) clearInterval(timerRef.current); }, []);
@@ -109,7 +119,7 @@ function RegisterPage() {
 
     setIsSending(true);
     try {
-      const resp = await fetch('/client/send-verification-code', {
+      const resp = await fetch('/api/client/send-verification-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
@@ -152,7 +162,8 @@ function RegisterPage() {
     try {
       const regBody = { email, password, verificationCode };
       if (phone.trim()) regBody.phone = `${countryCode}${phone}`;
-      const regResp = await fetch('/client/register', {
+      if (inviteCode.trim()) regBody.inviteCode = inviteCode.trim();
+      const regResp = await fetch('/api/client/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(regBody),
@@ -162,7 +173,7 @@ function RegisterPage() {
 
       // Auto login
       try {
-        const loginResp = await fetch('/client/login', {
+        const loginResp = await fetch('/api/client/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password }),
@@ -414,6 +425,24 @@ function RegisterPage() {
                   请先完成上方人机验证后再获取验证码
                 </p>
               )}
+            </div>
+
+            {/* ── Invite code (optional) ── */}
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-1.5">
+                <span className="flex items-center gap-1.5">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  邀请码
+                  <span className="text-gray-400 font-normal text-xs">（选填）</span>
+                </span>
+              </label>
+              <input
+                type="text"
+                value={inviteCode}
+                onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                placeholder="请输入邀请码"
+                className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-[#1A73E8] bg-gray-50 focus:bg-white outline-none transition-colors text-sm"
+              />
             </div>
 
             {/* ── Agreement ── */}

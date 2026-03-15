@@ -3786,6 +3786,17 @@ const App = () => {
   // 认证状态管理
   const [authView, setAuthView] = useState('login'); // 'login' or 'register'
 
+  // 监听 URL 路径变化，自动切换到注册页面
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasInviteParam = urlParams.has('invite') || urlParams.has('code') || urlParams.has('ref');
+    const isRegisterPath = window.location.pathname === '/register' || window.location.hash === '#register' || hasInviteParam;
+
+    if (isRegisterPath && authView !== 'register') {
+      setAuthView('register');
+    }
+  }, []);
+
   const sidebarMenu = useMemo(() => [
     { id: 'home', label: '主页', icon: Home },
     { id: 'dashboard', label: t('menu.dashboard'), icon: LayoutDashboard },

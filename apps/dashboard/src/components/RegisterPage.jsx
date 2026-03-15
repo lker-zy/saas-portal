@@ -32,6 +32,15 @@ const RegisterPage = ({ onNavigateToLogin }) => {
     }
   }, [countdown]);
 
+  // 从 URL 参数中自动填充邀请码
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const inviteCode = urlParams.get('invite') || urlParams.get('code') || urlParams.get('ref');
+    if (inviteCode) {
+      setFormData(prev => ({ ...prev, invitationCode: inviteCode }));
+    }
+  }, []);
+
   /**
    * 密码强度检查
    */

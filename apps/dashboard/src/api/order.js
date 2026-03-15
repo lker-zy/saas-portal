@@ -116,6 +116,21 @@ export const orderAPI = {
   calculatePrice: (params) =>
     axios.post('/order/internal/client/calculate-price', params),
 
+  /**
+   * 查询折扣信息
+   * @param {Object} params - 折扣查询参数
+   * @param {string} params.orderType - 订单类型
+   * @param {string} params.country - 国家
+   * @param {string} params.scenario - 场景
+   * @param {number} params.amount - 订单原价
+   * @param {number} params.quantity - 数量
+   * @param {number} params.duration - 购买时长（天）
+   * @param {string} params.couponCode - 优惠券代码（可选）
+   * @returns {Promise} { originalAmount, finalAmount, totalDiscount, discounts, appliedDiscounts }
+   */
+  getDiscount: (params) =>
+    axios.post('/order/client/products/discount', params),
+
   // ==================== 售后工单 ====================
 
   /**

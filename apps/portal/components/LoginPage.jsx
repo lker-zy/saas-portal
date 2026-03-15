@@ -26,7 +26,7 @@ function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      const loginResp = await fetch('/client/login', {
+      const loginResp = await fetch('/api/client/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),

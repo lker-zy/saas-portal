@@ -18,7 +18,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && npm run copy-portal",
+    "copy-portal": "cp -r build/apps/portal/* build/ 2>/dev/null || true",
     "preview": "vite preview"
   },
   "browserslist": {

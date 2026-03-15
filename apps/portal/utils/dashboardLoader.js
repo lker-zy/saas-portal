@@ -106,17 +106,31 @@ export async function loadDashboardSPA() {
 
         console.log('[Dashboard Loader] All CSS loaded, proceeding with scripts...');
 
-        // 8. 执行 body 中的脚本
+        // 8. 设置 body 内容
         dashboardContainer.innerHTML = bodyContent;
 
-        // 查找 script 标签并执行
-        const scripts = dashboardContainer.querySelectorAll('script[type="module"]');
-        scripts.forEach(oldScript => {
-          const newScript = document.createElement('script');
-          newScript.type = 'module';
-          newScript.src = oldScript.src;
-          newScript.textContent = oldScript.textContent;
-          oldScript.replaceWith(newScript);
+        // 9. 从 head 中提取并执行 script 标签
+        const scriptTempDiv = document.createElement('div');
+        scriptTempDiv.innerHTML = headContent;
+        const headScripts = scriptTempDiv.querySelectorAll('script[type="module"]');
+        console.log('[Dashboard Loader] Found', headScripts.length, 'module scripts in head');
+
+        headScripts.forEach((oldScript, index) => {
+          const src = oldScript.getAttribute('src');
+          if (src) {
+            console.log('[Dashboard Loader] Loading script:', src, `(${index + 1}/${headScripts.length})`);
+            const newScript = document.createElement('script');
+            newScript.type = 'module';
+            newScript.src = src;
+            newScript.crossorigin = oldScript.getAttribute('crossorigin') || 'anonymous';
+            newScript.onload = () => {
+              console.log('[Dashboard Loader] Script loaded:', src);
+            };
+            newScript.onerror = (error) => {
+              console.error('[Dashboard Loader] Script failed to load:', src, error);
+            };
+            document.head.appendChild(newScript);
+          }
         });
 
         console.log('[Dashboard Loader] Dashboard loaded successfully');

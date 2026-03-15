@@ -338,6 +338,9 @@
 
     if (!videoContainer) initVideo();
 
+    // 再次检查 videoContainer 是否成功创建
+    if (!videoContainer) return;
+
     // 已正确挂载则不再操作
     if (videoContainer.parentNode === heroSection) return;
 

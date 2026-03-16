@@ -94,6 +94,8 @@ export const AuthProvider = ({ children }) => {
     authService.logout();
     clearAuthData();
     setUser(null);
+    // 跳转回portal首页
+    window.location.href = '/';
   };
 
   /**

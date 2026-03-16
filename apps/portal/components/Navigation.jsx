@@ -154,9 +154,10 @@ function Navigation() {
         <div className="header-content">
           {/* Hamburger Button for Mobile */}
           <button
-            className="mobile-menu-btn"
+            className={`mobile-menu-btn ${mobileMenuOpen ? 'active' : ''}`}
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label="菜单"
+            aria-expanded={mobileMenuOpen}
           >
             <span></span>
             <span></span>

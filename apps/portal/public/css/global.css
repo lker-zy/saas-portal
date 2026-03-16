@@ -1343,7 +1343,6 @@ footer {
 
 /* ── 移动端侧边抽屉菜单 ── */
 .mobile-nav-drawer {
-  display: none;
   position: fixed;
   top: 0;
   right: -100%;
@@ -1364,16 +1363,17 @@ footer {
   right: 0;
 }
 .mobile-nav-overlay {
-  display: none;
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.25);
   z-index: 10000;
   opacity: 0;
+  visibility: hidden;
   transition: opacity 0.3s ease;
 }
 .mobile-nav-overlay.open {
   opacity: 1;
+  visibility: visible;
 }
 
 .mobile-nav-drawer a,

@@ -1,26 +1,22 @@
 /**
- * Dashboard 独立 SPA 加载器
- * 当访问 /dashboard 路由时，动态替换整个页面 HTML，实现完全隔离
+ * Dashboard 独立 SPA 加载器 - 生产环境
+ * 用于构建后的生产环境，脚本在 <head> 中
  */
 
-// Dashboard 入口 URL
 const DASHBOARD_ENTRY_URL = '/apps/dashboard/index.html';
 
-/**
- * 加载 dashboard 为独立 SPA
- */
 export async function loadDashboardSPA() {
   console.log('[Dashboard Loader] Loading dashboard as independent SPA...');
 
   try {
-    // 1. 隐藏主应用
+    // 隐藏主应用
     const rootEl = document.getElementById('root');
     const helpCenter = document.getElementById('help-center-page');
 
     if (rootEl) rootEl.style.display = 'none';
     if (helpCenter) helpCenter.style.display = 'none';
 
-    // 2. 隐藏 portal 特有的元素
+    // 隐藏 portal 特有的元素
     const footer = document.querySelector('.quantum-footer');
     if (footer) footer.style.display = 'none';
 
@@ -28,31 +24,31 @@ export async function loadDashboardSPA() {
     const pageOverlay = document.getElementById('page-transition-overlay');
     if (pageOverlay) pageOverlay.style.display = 'none';
 
-    // 3. 禁用 portal 的 CSS（避免影响 dashboard）
+    // 禁用 portal 的 CSS（避免影响 dashboard）
     const portalLinks = document.querySelectorAll('link[href*="/css/"], link[href="/tailwind.css"]');
     portalLinks.forEach(link => {
       link.disabled = true;
       console.log('[Dashboard Loader] Disabled portal CSS:', link.href);
     });
 
-    // 3. 检查是否已经加载过 dashboard
+    // 检查是否已经加载过 dashboard
     let dashboardContainer = document.getElementById('dashboard-root');
 
     if (!dashboardContainer) {
-      // 4. 创建 dashboard 容器
+      // 创建 dashboard 容器
       dashboardContainer = document.createElement('div');
       dashboardContainer.id = 'dashboard-root';
       dashboardContainer.style.cssText = 'width: 100%; height: 100vh; overflow: hidden;';
       document.body.appendChild(dashboardContainer);
 
-      // 5. 获取 dashboard HTML 内容
+      // 获取 dashboard HTML 内容
       const response = await fetch(DASHBOARD_ENTRY_URL);
       if (!response.ok) {
         throw new Error(`Failed to load dashboard: ${response.status}`);
       }
       let html = await response.text();
 
-      // 6. 提取 head 中的样式和脚本
+      // 提取 head 中的样式和脚本
       const headMatch = html.match(/<head>([\s\S]*?)<\/head>/i);
       const bodyMatch = html.match(/<body>([\s\S]*?)<\/body>/i);
 
@@ -60,7 +56,7 @@ export async function loadDashboardSPA() {
         const headContent = headMatch[1];
         const bodyContent = bodyMatch[1];
 
-        // 7. 添加 head 中的样式到当前页面
+        // 添加 head 中的样式到当前页面
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = headContent;
 
@@ -142,10 +138,10 @@ export async function loadDashboardSPA() {
       dashboardContainer.style.display = 'block';
     }
 
-    // 9. 设置页面标题
+    // 设置页面标题
     document.title = 'Dashboard - Quantum Proxy';
 
-    // 10. 更新 URL（不刷新页面）
+    // 更新 URL（不刷新页面）
     if (window.location.pathname !== '/dashboard') {
       window.history.pushState({ dashboard: true }, '', '/dashboard');
     }

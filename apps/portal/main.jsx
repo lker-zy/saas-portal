@@ -5,12 +5,34 @@ import './index.css';
 // Debug: 确认 main.jsx 被加载
 console.log('[Main] main.jsx loaded!');
 console.log('[Main] Location:', window.location.pathname, window.location.search, window.location.hash);
+console.log('[Main] Environment:', import.meta.env?.DEV ? 'Development' : 'Production');
 
 import HomePage from './components/HomePage';
 import StaticResidentialPurchase from './components/StaticResidentialPurchase';
 import RegisterPage from './components/RegisterPage';
 import LoginPage from './components/LoginPage';
-import { loadDashboardSPA } from './utils/dashboardLoader';
+
+// 根据环境选择 dashboardLoader - 使用 Vite 的条件导入
+let loadDashboardSPA;
+if (import.meta.env?.DEV) {
+  console.log('[Main] Importing dashboardLoader.dev.js for development');
+  // 动态导入开发版本
+  import('./utils/dashboardLoader.dev.js').then(module => {
+    loadDashboardSPA = module.loadDashboardSPA;
+    console.log('[Main] Development dashboard loader loaded');
+  }).catch(err => {
+    console.error('[Main] Failed to load dev dashboard loader:', err);
+  });
+} else {
+  console.log('[Main] Importing dashboardLoader.js for production');
+  import('./utils/dashboardLoader.js').then(module => {
+    loadDashboardSPA = module.loadDashboardSPA;
+    console.log('[Main] Production dashboard loader loaded');
+  }).catch(err => {
+    console.error('[Main] Failed to load prod dashboard loader:', err);
+  });
+}
+
 import StaticISPPage from './components/StaticISPPage';
 import SolutionsPage from './components/SolutionsPage';
 import CompanyPage from './components/CompanyPage';
@@ -115,7 +137,19 @@ if (pathname === '/login' || hash === '#login' || hash === '#/login') {
 // Dashboard 作为独立 SPA，使用动态 HTML 加载
 if (pathname === '/dashboard') {
   console.log('[Main] === DASHBOARD ROUTE - Loading as independent SPA ===');
-  loadDashboardSPA();
+  if (loadDashboardSPA) {
+    loadDashboardSPA();
+  } else {
+    console.warn('[Main] loadDashboardSPA not loaded yet, retrying...');
+    // 如果函数还没加载，等待一下再试
+    setTimeout(() => {
+      if (loadDashboardSPA) {
+        loadDashboardSPA();
+      } else {
+        console.error('[Main] Failed to load dashboard SPA');
+      }
+    }, 100);
+  }
 }
 
 // ───── Route: Purchase pages (all product types) ─────

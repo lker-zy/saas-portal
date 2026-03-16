@@ -43,6 +43,63 @@ async function waitForDashboardLoader() {
   return loadDashboardSPA;
 }
 
+// 恢复 Portal 状态（用于从 Dashboard 返回其他页面）
+function restorePortalState() {
+  console.log('[Main] Restoring Portal state...');
+
+  // 隐藏 dashboard
+  const dashboardRoot = document.getElementById('dashboard-root');
+  if (dashboardRoot) {
+    dashboardRoot.style.display = 'none';
+    console.log('[Main] Hidden dashboard-root');
+  }
+
+  // 显示主应用根元素
+  const rootEl = document.getElementById('root');
+  if (rootEl) {
+    rootEl.style.display = 'block';
+  }
+
+  // 显示帮助中心
+  const helpCenter = document.getElementById('help-center-page');
+  if (helpCenter) {
+    helpCenter.style.display = 'block';
+  }
+
+  // 显示 Footer
+  const footer = document.querySelector('.quantum-footer');
+  if (footer) {
+    footer.style.display = 'block';
+  }
+
+  // 恢复页面过渡叠加层
+  const pageOverlay = document.getElementById('page-transition-overlay');
+  if (pageOverlay) {
+    pageOverlay.style.display = '';
+  }
+
+  // 恢复 Portal 导航元素
+  const homeHeader = document.querySelector('.home-header');
+  if (homeHeader) {
+    homeHeader.style.display = '';
+  }
+
+  // 恢复移动端导航抽屉
+  const mobileNavDrawer = document.querySelector('.mobile-nav-drawer');
+  if (mobileNavDrawer) {
+    mobileNavDrawer.style.display = '';
+  }
+
+  // 重新启用 Portal 的 CSS
+  const portalLinks = document.querySelectorAll('link[href*="/css/"], link[href="/tailwind.css"]');
+  portalLinks.forEach(link => {
+    link.disabled = false;
+    console.log('[Main] Re-enabled portal CSS:', link.href);
+  });
+
+  console.log('[Main] Portal state restored');
+}
+
 import StaticISPPage from './components/StaticISPPage';
 import SolutionsPage from './components/SolutionsPage';
 import CompanyPage from './components/CompanyPage';
@@ -93,6 +150,12 @@ const tab = params.get('tab');
 const hash = window.location.hash;
 
 console.log('[Main] Route check:', { pathname, tab, hash, isHome: !tab && !hash && pathname === '/' });
+
+// 对于所有非 Dashboard 路由，恢复 Portal 状态
+// 这确保从 Dashboard 导航到其他页面时，Portal 的 CSS 和元素正确恢复
+if (pathname !== '/dashboard') {
+  restorePortalState();
+}
 
 // 首页：使用 HomePage 组件渲染
 if (!tab && !hash && pathname === '/') {

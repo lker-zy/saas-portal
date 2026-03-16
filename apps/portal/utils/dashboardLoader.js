@@ -24,6 +24,17 @@ export async function loadDashboardSPA() {
     const pageOverlay = document.getElementById('page-transition-overlay');
     if (pageOverlay) pageOverlay.style.display = 'none';
 
+    // 隐藏 Portal 导航元素
+    const homeHeader = document.querySelector('.home-header');
+    if (homeHeader) homeHeader.style.display = 'none';
+
+    // 隐藏移动端导航抽屉（如果存在）
+    const mobileNavDrawer = document.querySelector('.mobile-nav-drawer');
+    if (mobileNavDrawer) {
+      mobileNavDrawer.style.display = 'none';
+      console.log('[Dashboard Loader] Hidden mobile nav drawer');
+    }
+
     // 禁用 portal 的 CSS（避免影响 dashboard）
     const portalLinks = document.querySelectorAll('link[href*="/css/"], link[href="/tailwind.css"]');
     portalLinks.forEach(link => {
@@ -195,6 +206,17 @@ export function unloadDashboardSPA() {
   // 恢复页面过渡叠加层
   const pageOverlay = document.getElementById('page-transition-overlay');
   if (pageOverlay) pageOverlay.style.display = '';
+
+  // 恢复 Portal 导航元素
+  const homeHeader = document.querySelector('.home-header');
+  if (homeHeader) homeHeader.style.display = '';
+
+  // 恢复移动端导航抽屉
+  const mobileNavDrawer = document.querySelector('.mobile-nav-drawer');
+  if (mobileNavDrawer) {
+    mobileNavDrawer.style.display = '';
+    console.log('[Dashboard Loader] Restored mobile nav drawer');
+  }
 
   // 重新启用 portal 的 CSS
   const portalLinks = document.querySelectorAll('link[href*="/css/"], link[href="/tailwind.css"]');

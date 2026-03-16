@@ -14,23 +14,33 @@ import LoginPage from './components/LoginPage';
 
 // 根据环境选择 dashboardLoader - 使用 Vite 的条件导入
 let loadDashboardSPA;
-if (import.meta.env?.DEV) {
-  console.log('[Main] Importing dashboardLoader.dev.js for development');
-  // 动态导入开发版本
-  import('./utils/dashboardLoader.dev.js').then(module => {
-    loadDashboardSPA = module.loadDashboardSPA;
-    console.log('[Main] Development dashboard loader loaded');
-  }).catch(err => {
-    console.error('[Main] Failed to load dev dashboard loader:', err);
-  });
-} else {
-  console.log('[Main] Importing dashboardLoader.js for production');
-  import('./utils/dashboardLoader.js').then(module => {
-    loadDashboardSPA = module.loadDashboardSPA;
-    console.log('[Main] Production dashboard loader loaded');
-  }).catch(err => {
-    console.error('[Main] Failed to load prod dashboard loader:', err);
-  });
+let dashboardLoaderReady = false;
+
+// 创建一个 Promise 来等待 loader 加载完成
+const dashboardLoaderPromise = (async () => {
+  try {
+    if (import.meta.env?.DEV) {
+      console.log('[Main] Importing dashboardLoader.dev.js for development');
+      const module = await import('./utils/dashboardLoader.dev.js');
+      loadDashboardSPA = module.loadDashboardSPA;
+      console.log('[Main] Development dashboard loader loaded');
+    } else {
+      console.log('[Main] Importing dashboardLoader.js for production');
+      const module = await import('./utils/dashboardLoader.js');
+      loadDashboardSPA = module.loadDashboardSPA;
+      console.log('[Main] Production dashboard loader loaded');
+    }
+    dashboardLoaderReady = true;
+  } catch (err) {
+    console.error('[Main] Failed to load dashboard loader:', err);
+    dashboardLoaderReady = true; // 标记为已尝试加载
+  }
+})();
+
+// 辅助函数：等待 dashboard loader 准备就绪
+async function waitForDashboardLoader() {
+  await dashboardLoaderPromise;
+  return loadDashboardSPA;
 }
 
 import StaticISPPage from './components/StaticISPPage';
@@ -137,19 +147,17 @@ if (pathname === '/login' || hash === '#login' || hash === '#/login') {
 // Dashboard 作为独立 SPA，使用动态 HTML 加载
 if (pathname === '/dashboard') {
   console.log('[Main] === DASHBOARD ROUTE - Loading as independent SPA ===');
-  if (loadDashboardSPA) {
-    loadDashboardSPA();
-  } else {
-    console.warn('[Main] loadDashboardSPA not loaded yet, retrying...');
-    // 如果函数还没加载，等待一下再试
-    setTimeout(() => {
-      if (loadDashboardSPA) {
-        loadDashboardSPA();
-      } else {
-        console.error('[Main] Failed to load dashboard SPA');
-      }
-    }, 100);
-  }
+  // 等待 dashboard loader 加载完成
+  waitForDashboardLoader().then(loader => {
+    if (loader) {
+      console.log('[Main] Dashboard loader ready, loading dashboard...');
+      loader();
+    } else {
+      console.error('[Main] Dashboard loader failed to load');
+    }
+  }).catch(err => {
+    console.error('[Main] Error waiting for dashboard loader:', err);
+  });
 }
 
 // ───── Route: Purchase pages (all product types) ─────

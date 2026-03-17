@@ -6,20 +6,28 @@
 // 支付方式配置数据
 const PAYMENT_METHODS = [
   {
-    id: 'balance',
-    name: '余额支付',
-    iconType: 'wallet',
-    brandColor: '#10B981',
-    bgActive: 'border-emerald-400 bg-emerald-50/50 ring-2 ring-emerald-100',
-    description: '使用账户余额支付'
+    id: 'stripe',
+    name: '银行卡',
+    iconType: 'card',
+    brandColor: '#1A73E8',
+    bgActive: 'border-blue-400 bg-blue-50/50 ring-2 ring-blue-100',
+    description: 'Visa、Mastercard、American Express'
   },
   {
-    id: 'stripe',
-    name: 'Stripe支付',
-    iconType: 'card',
-    brandColor: '#635bff',
-    bgActive: 'border-indigo-400 bg-indigo-50/50 ring-2 ring-indigo-100',
-    description: '银行卡、支付宝、微信支付'
+    id: 'wechat',
+    name: '微信支付',
+    iconType: 'wechat',
+    brandColor: '#07C160',
+    bgActive: 'border-green-400 bg-green-50/50 ring-2 ring-green-100',
+    description: 'WeChat Pay · 安全快捷'
+  },
+  {
+    id: 'alipay',
+    name: '支付宝',
+    iconType: 'alipay',
+    brandColor: '#1677FF',
+    bgActive: 'border-blue-400 bg-blue-50/50 ring-2 ring-blue-100',
+    description: 'Alipay · 全球信赖'
   },
   {
     id: 'usdt',
@@ -27,9 +35,18 @@ const PAYMENT_METHODS = [
     iconType: 'usdt',
     brandColor: '#26A17B',
     bgActive: 'border-emerald-400 bg-emerald-50/50 ring-2 ring-emerald-100',
-    description: '加密货币支付'
+    description: '稳定币 · 去中心化支付'
   },
 ];
+
+// 余额支付配置（不作为独立支付方式，用于 renderPaymentFooter）
+export const BALANCE_PAYMENT_CONFIG = {
+  id: 'balance',
+  name: '余额支付',
+  iconType: 'wallet',
+  brandColor: '#10B981',
+  description: '使用账户余额支付'
+};
 
 // USDT 支持的网络
 const USDT_NETWORKS = [

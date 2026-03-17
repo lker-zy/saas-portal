@@ -8,7 +8,6 @@ import {
 import { productService } from '../services/productService';
 import { paymentService } from '../services/paymentService';
 import orderService from '../services/orderService';
-import { StripePaymentMethodSelector } from './StripePaymentMethodSelector';
 import { useAuth } from '../contexts/AuthContext';
 import { usePurchaseFlow } from '../hooks/usePurchaseFlow';
 
@@ -521,6 +520,7 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
   const [savedPaymentMethods, setSavedPaymentMethods] = useState([]);
   const [currentBalance, setCurrentBalance] = useState(null);
   const [userBalance, setUserBalance] = useState(0);
+  const [useBalance, setUseBalance] = useState(false);
 
   // Form State
   const [selectedRegion, setSelectedRegion] = useState(null);
@@ -551,7 +551,6 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
   
   // Payment state
   const [paymentMethod, setPaymentMethod] = useState('stripe');
-  const [stripePaymentMethod, setStripePaymentMethod] = useState('card'); // card, alipay, wechat
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [cardName, setCardName] = useState('');
   const [cardNumber, setCardNumber] = useState('');
@@ -589,6 +588,10 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
         return <Wallet className="w-5 h-5 text-[#10B981]" />;
       case 'card':
         return <WalletCardIcon size="icon" />;
+      case 'wechat':
+        return <WeChatIcon size="icon" />;
+      case 'alipay':
+        return <AlipayIcon size="icon" />;
       case 'usdt':
         return <UsdtIcon size="icon" />;
       default:
@@ -801,10 +804,10 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
       ? selectedCycle?.days
       : (selectedDuration?.days ?? customDurationDays);
 
-    // 确定实际支付方式：根据选中的支付方式
-    // 对于Stripe，附加具体支付方式（如stripe:card, stripe:alipay, stripe:wechat_pay）
-    const actualPaymentMethod = paymentMethod === 'stripe'
-      ? `stripe:${stripePaymentMethod}`
+    // 确定实际支付方式
+    // 如果使用余额支付，则添加 balance 前缀
+    const actualPaymentMethod = useBalance
+      ? `balance:${paymentMethod}`
       : paymentMethod;
 
     const orderData = {
@@ -871,7 +874,7 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
   const afterDiscountCNY = afterDiscountUSD * 7.2;
 
   // Recalculate balance deduction based on after-discount amount
-  if (paymentMethod === 'balance') {
+  if (useBalance) {
     if (userBalance >= afterDiscountUSD) {
       balanceDeduction = afterDiscountUSD;
       finalPayAmount = 0;
@@ -946,8 +949,24 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
   // Shared payment footer renderer
   const renderPaymentFooter = (brandColor = '#1A73E8') => (
     <>
-      {/* Subscription */}
+      {/* Balance & Subscription */}
       <div className="space-y-3 pt-2 border-t border-gray-100">
+        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-200">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-blue-100 rounded-lg text-[#1A73E8]">
+              <Wallet className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="text-sm font-semibold text-gray-900">使用余额支付</div>
+              <div className="text-xs text-gray-500">可用余额: <span className="font-medium text-gray-900">${(currentBalance !== null ? currentBalance : (user?.balance || 0)).toFixed(2)}</span></div>
+            </div>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" className="sr-only peer" checked={useBalance} onChange={(e) => setUseBalance(e.target.checked)} />
+            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#1A73E8]"></div>
+          </label>
+        </div>
+
         <div className="flex items-start gap-3 p-3 bg-blue-50/50 rounded-xl border border-blue-100">
           <div className="pt-0.5">
             <input type="checkbox" className="rounded border-gray-300 text-[#1A73E8] focus:ring-blue-500 w-4 h-4"
@@ -964,8 +983,8 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
       </div>
 
       <label className="flex items-center gap-2 cursor-pointer group pt-1">
-        <input type="checkbox" className="rounded border-gray-300 text-[#1A73E8] focus:ring-blue-500 w-4 h-4" 
-          checked={agreedTerms} onChange={(e) => setAgreedTerms(e.target.checked)} 
+        <input type="checkbox" className="rounded border-gray-300 text-[#1A73E8] focus:ring-blue-500 w-4 h-4"
+          checked={agreedTerms} onChange={(e) => setAgreedTerms(e.target.checked)}
         />
         <span className="text-[13px] text-gray-600 group-hover:text-gray-800 transition-colors">
           我已经阅读并同意 <a href="#" className="text-[#1A73E8] hover:text-blue-700 font-medium">《退款协议》</a>
@@ -987,7 +1006,7 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
           ) : (
             <span>立即支付</span>
           )}
-          {paymentMethod === 'balance' && balanceDeduction > 0 && (
+          {useBalance && balanceDeduction > 0 && (
             <span className="text-white/70 text-sm font-normal">
               (余额抵扣 ${balanceDeduction.toFixed(2)})
             </span>
@@ -1553,7 +1572,7 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
                     )}
 
                     {/* Balance deduction */}
-                    {paymentMethod === 'balance' && balanceDeduction > 0 && (
+                    {useBalance && balanceDeduction > 0 && (
                       <div className="flex justify-between items-center px-4 py-2.5 text-[13px]">
                         <span className="text-gray-600 flex items-center gap-1.5">
                           余额抵扣
@@ -1569,17 +1588,17 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
                   <div className="flex justify-between items-end px-4 py-3 bg-gray-50 border-t border-gray-200">
                     <div>
                       <div className="text-[12px] font-semibold text-gray-500 uppercase tracking-wider">
-                        {(paymentMethod === 'balance' || couponApplied || discountInfo?.totalDiscount > 0) ? '应付金额' : '合计'}
+                        {(useBalance || couponApplied || discountInfo?.totalDiscount > 0) ? '应付金额' : '合计'}
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className={`font-bold tracking-tight tabular-nums ${(paymentMethod === 'balance' || couponApplied || discountInfo?.totalDiscount > 0) ? 'text-xl text-[#1A73E8]' : 'text-xl text-gray-900'}`}>
+                      <div className={`font-bold tracking-tight tabular-nums ${(useBalance || couponApplied || discountInfo?.totalDiscount > 0) ? 'text-xl text-[#1A73E8]' : 'text-xl text-gray-900'}`}>
                         <span className="text-sm mr-0.5 opacity-60">¥</span>
-                        {(paymentMethod === 'balance' || couponApplied || discountInfo?.totalDiscount > 0) ? finalPayAmountCNY : totalCNY}
+                        {(useBalance || couponApplied || discountInfo?.totalDiscount > 0) ? finalPayAmountCNY : totalCNY}
                       </div>
-                      {(paymentMethod === 'balance' || couponApplied || discountInfo?.totalDiscount > 0) && (
+                      {(useBalance || couponApplied || discountInfo?.totalDiscount > 0) && (
                         <div className="text-[11px] text-gray-400 mt-0.5 tabular-nums">
-                          ≈ ${(paymentMethod === 'balance' || couponApplied || discountInfo?.totalDiscount > 0) ? (finalPayAmount).toFixed(2) : totalUSD} USD
+                          ≈ ${(useBalance || couponApplied || discountInfo?.totalDiscount > 0) ? (finalPayAmount).toFixed(2) : totalUSD} USD
                         </div>
                       )}
                     </div>
@@ -1622,18 +1641,8 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
                   })}
                 </div>
 
-                {/* Stripe Payment Method Selector */}
-                {paymentMethod === 'stripe' && (
-                  <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                    <StripePaymentMethodSelector
-                      selected={stripePaymentMethod}
-                      onChange={setStripePaymentMethod}
-                    />
-                  </div>
-                )}
-
                 {/* Bank Card Details (Informational) */}
-                {paymentMethod === 'stripe' && stripePaymentMethod === 'card' && (
+                {paymentMethod === 'stripe' && (
                   <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300 px-1">
                     
                     <div className="flex items-center gap-3 pt-1 pb-1">
@@ -1774,8 +1783,50 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
                   </div>
                 )}
 
+                {/* ── WeChat Pay Details ── */}
+                {paymentMethod === 'wechat' && (
+                  <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300 px-1">
+                    {/* WeChat Pay Branding */}
+                    <div className="p-4 rounded-2xl border border-green-100 bg-gradient-to-br from-green-50/60 to-emerald-50/40">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-10 h-10 rounded-xl bg-[#07C160] flex items-center justify-center shadow-sm shadow-green-200">
+                          <svg viewBox="0 0 576 512" className="w-6 h-6" fill="white" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M385.2 167.6c6.4 0 12.6.3 18.8 1.1C387.4 90.3 303.3 32 207.7 32 100.5 32 13 104.8 13 197.4c0 53.4 29.3 97.5 77.9 131.6l-19.3 58.6 68-34.1c24.4 4.8 43.8 9.7 68.2 9.7 6.2 0 12.1-.3 18.3-.8-3.8-13-5.9-26.8-5.9-41.2 0-87.8 79.2-154.2 165-154.2zm-104.5-52.9c14.5 0 24.2 9.7 24.2 24.4 0 14.5-9.7 24.2-24.2 24.2-14.8 0-29.3-9.7-29.3-24.2 0-14.8 14.5-24.4 29.3-24.4zm-136.4 48.6c-14.5 0-29.3-9.7-29.3-24.2 0-14.8 14.8-24.4 29.3-24.4 14.8 0 24.4 9.7 24.4 24.4 0 14.5-9.7 24.2-24.4 24.2zM563 319.4c0-77.9-77.9-141.3-165.4-141.3-92.7 0-165.4 63.4-165.4 141.3S305 460.7 397.6 460.7c19.3 0 38.9-4.8 58.6-9.7l53.4 29.3-14.8-48.6C534 402.1 563 363.2 563 319.4zm-219.1-24.5c-9.7 0-19.3-9.7-19.3-19.6 0-9.7 9.7-19.3 19.3-19.3 14.8 0 24.4 9.7 24.4 19.3 0 10-9.7 19.6-24.4 19.6zm107.1 0c-9.7 0-19.3-9.7-19.3-19.6 0-9.7 9.7-19.3 19.3-19.3 14.5 0 24.4 9.7 24.4 19.3 0 10-9.9 19.6-24.4 19.6z"/>
+                          </svg>
+                        </div>
+                        <div>
+                          <div className="text-sm font-bold text-gray-900">微信支付</div>
+                          <div className="text-xs text-gray-500">WeChat Pay · 安全快捷</div>
+                        </div>
+                        <div className="ml-auto flex items-center gap-1.5 text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">
+                          <Shield className="w-3.5 h-3.5" />
+                          <span className="text-[11px] font-semibold">已加密</span>
+                        </div>
+                      </div>
+
+                      {/* Payment Flow Steps */}
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-3 p-2.5 bg-white/80 rounded-xl">
+                          <div className="w-6 h-6 rounded-full bg-[#07C160] text-white flex items-center justify-center text-xs font-bold shrink-0">1</div>
+                          <span className="text-[13px] text-gray-700">点击「立即支付」生成付款二维码</span>
+                        </div>
+                        <div className="flex items-center gap-3 p-2.5 bg-white/80 rounded-xl">
+                          <div className="w-6 h-6 rounded-full bg-[#07C160] text-white flex items-center justify-center text-xs font-bold shrink-0">2</div>
+                          <span className="text-[13px] text-gray-700">打开微信「扫一扫」扫描二维码</span>
+                        </div>
+                        <div className="flex items-center gap-3 p-2.5 bg-white/80 rounded-xl">
+                          <div className="w-6 h-6 rounded-full bg-[#07C160] text-white flex items-center justify-center text-xs font-bold shrink-0">3</div>
+                          <span className="text-[13px] text-gray-700">确认支付后系统自动完成交付</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {renderPaymentFooter('#07C160')}
+                  </div>
+                )}
+
                 {/* ── Alipay Details ── */}
-                {paymentMethod === 'stripe' && stripePaymentMethod === 'alipay' && (
+                {paymentMethod === 'alipay' && (
                   <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300 px-1">
                     {/* Alipay Branding */}
                     <div className="p-4 rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50/60 to-blue-50/40">
@@ -1829,86 +1880,6 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
                     </div>
 
                     {renderPaymentFooter('#1677FF')}
-                  </div>
-                )}
-
-                {/* ── WeChat Pay Details ── */}
-                {paymentMethod === 'stripe' && stripePaymentMethod === 'wechat_pay' && (
-                  <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300 px-1">
-                    {/* WeChat Pay Branding */}
-                    <div className="p-4 rounded-2xl border border-green-100 bg-gradient-to-br from-green-50/60 to-emerald-50/40">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="w-10 h-10 rounded-xl bg-[#07C160] flex items-center justify-center shadow-sm shadow-green-200">
-                          <svg viewBox="0 0 576 512" className="w-6 h-6" fill="white" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M385.2 167.6c6.4 0 12.6.3 18.8 1.1C387.4 90.3 303.3 32 207.7 32 100.5 32 13 104.8 13 197.4c0 53.4 29.3 97.5 77.9 131.6l-19.3 58.6 68-34.1c24.4 4.8 43.8 9.7 68.2 9.7 6.2 0 12.1-.3 18.3-.8-3.8-13-5.9-26.8-5.9-41.2 0-87.8 79.2-154.2 165-154.2zm-104.5-52.9c14.5 0 24.2 9.7 24.2 24.4 0 14.5-9.7 24.2-24.2 24.2-14.8 0-29.3-9.7-29.3-24.2 0-14.8 14.5-24.4 29.3-24.4zm-136.4 48.6c-14.5 0-29.3-9.7-29.3-24.2 0-14.8 14.8-24.4 29.3-24.4 14.8 0 24.4 9.7 24.4 24.4 0 14.5-9.7 24.2-24.4 24.2zM563 319.4c0-77.9-77.9-141.3-165.4-141.3-92.7 0-165.4 63.4-165.4 141.3S305 460.7 397.6 460.7c19.3 0 38.9-4.8 58.6-9.7l53.4 29.3-14.8-48.6C534 402.1 563 363.2 563 319.4zm-219.1-24.5c-9.7 0-19.3-9.7-19.3-19.6 0-9.7 9.7-19.3 19.3-19.3 14.8 0 24.4 9.7 24.4 19.3 0 10-9.7 19.6-24.4 19.6zm107.1 0c-9.7 0-19.3-9.7-19.3-19.6 0-9.7 9.7-19.3 19.3-19.3 14.5 0 24.4 9.7 24.4 19.3 0 10-9.9 19.6-24.4 19.6z"/>
-                          </svg>
-                        </div>
-                        <div>
-                          <div className="text-sm font-bold text-gray-900">微信支付</div>
-                          <div className="text-xs text-gray-500">WeChat Pay · 安全快捷</div>
-                        </div>
-                        <div className="ml-auto flex items-center gap-1.5 text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">
-                          <Shield className="w-3.5 h-3.5" />
-                          <span className="text-[11px] font-semibold">已加密</span>
-                        </div>
-                      </div>
-
-                      {/* Payment Flow Steps */}
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-3 p-2.5 bg-white/80 rounded-xl">
-                          <div className="w-6 h-6 rounded-full bg-[#07C160] text-white flex items-center justify-center text-xs font-bold shrink-0">1</div>
-                          <span className="text-[13px] text-gray-700">点击「立即支付」生成付款二维码</span>
-                        </div>
-                        <div className="flex items-center gap-3 p-2.5 bg-white/80 rounded-xl">
-                          <div className="w-6 h-6 rounded-full bg-[#07C160] text-white flex items-center justify-center text-xs font-bold shrink-0">2</div>
-                          <span className="text-[13px] text-gray-700">打开微信「扫一扫」扫描二维码</span>
-                        </div>
-                        <div className="flex items-center gap-3 p-2.5 bg-white/80 rounded-xl">
-                          <div className="w-6 h-6 rounded-full bg-[#07C160] text-white flex items-center justify-center text-xs font-bold shrink-0">3</div>
-                          <span className="text-[13px] text-gray-700">确认支付后系统自动完成交付</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {renderPaymentFooter('#07C160')}
-                  </div>
-                )}
-
-                {/* ── Balance Details ── */}
-                {paymentMethod === 'balance' && (
-                  <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300 px-1">
-                    {/* Balance Branding */}
-                    <div className="p-4 rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50/60 to-teal-50/40">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="w-10 h-10 rounded-xl bg-[#10B981] flex items-center justify-center shadow-sm shadow-emerald-200">
-                          <Wallet className="w-6 h-6 text-white" />
-                        </div>
-                        <div>
-                          <div className="text-sm font-bold text-gray-900">余额支付</div>
-                          <div className="text-xs text-gray-500">使用账户余额直接支付</div>
-                        </div>
-                      </div>
-
-                      {/* Balance Info */}
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between p-3 bg-white/80 rounded-xl">
-                          <span className="text-[13px] text-gray-600">当前余额</span>
-                          <span className="text-[13px] font-semibold text-gray-900">
-                            ${(currentBalance !== null ? currentBalance : (user?.balance || 0)).toFixed(2)}
-                          </span>
-                        </div>
-                        {balanceDeduction > 0 && (
-                          <div className="flex items-center justify-between p-3 bg-emerald-50/80 rounded-xl">
-                            <span className="text-[13px] text-gray-600">本次扣款</span>
-                            <span className="text-[13px] font-semibold text-emerald-600">
-                              ${balanceDeduction.toFixed(2)}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {renderPaymentFooter('#10B981')}
                   </div>
                 )}
 

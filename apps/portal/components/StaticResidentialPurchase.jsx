@@ -2024,7 +2024,7 @@ const StaticResidentialPurchase = () => {
 
               <div className="p-4 space-y-4">
                 {/* Payment Methods — Card Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-4 sm:mb-6">
+                <div className="grid grid-cols-4 gap-3 mb-6">
                   {PAYMENT_METHODS.map(method => {
                     const isActive = paymentMethod === method.id;
                     return (
@@ -2050,8 +2050,8 @@ const StaticResidentialPurchase = () => {
                 {/* Bank Card Details (Informational) */}
                 {paymentMethod === 'stripe' && (
                   <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300 px-1">
-                    
-                    <div className="flex items-center gap-2 sm:gap-3 pt-1 pb-1 flex-wrap">
+
+                    <div className="flex items-center gap-3 pt-1 pb-1">
                       <div className="h-10 w-14 flex items-center justify-center rounded-lg overflow-hidden">
                         <img src={card1Img} alt="Mastercard" className="w-full h-full object-contain" />
                       </div>

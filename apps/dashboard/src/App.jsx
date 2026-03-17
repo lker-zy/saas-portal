@@ -3824,7 +3824,7 @@ const App = () => {
 
   const [activeTab, setActiveTab] = useState('dashboard');
   const previousTabRef = useRef('dashboard');
-  const [settingsType, setSettingsType] = useState('profile'); 
+  const [settingsType, setSettingsType] = useState('profile');
   const [purchaseType, setPurchaseType] = useState('buy_static_isp');
 
   // Track previous tab for back navigation
@@ -3832,6 +3832,16 @@ const App = () => {
     previousTabRef.current = activeTab;
     setActiveTab(tab);
   };
+
+  // 监听 URL 参数 tab，自动切换到对应的 tab（移到 activeTab 声明之后）
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab');
+    if (tabParam && tabParam !== activeTab) {
+      console.log('[Dashboard] URL tab param detected:', tabParam, '- switching tab');
+      setActiveTab(tabParam);
+    }
+  }, []); // 不依赖 activeTab，只在组件挂载时执行一次
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [wizardClient, setWizardClient] = useState(null);
   const [editingConfig, setEditingConfig] = useState(null);

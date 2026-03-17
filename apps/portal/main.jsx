@@ -11,6 +11,8 @@ import HomePage from './components/HomePage';
 import StaticResidentialPurchase from './components/StaticResidentialPurchase';
 import RegisterPage from './components/RegisterPage';
 import LoginPage from './components/LoginPage';
+import StripePaymentSuccess from './components/StripePaymentSuccess';
+import StripePaymentCancel from './components/StripePaymentCancel';
 
 // 根据环境选择 dashboardLoader - 使用 Vite 的条件导入
 let loadDashboardSPA;
@@ -149,7 +151,7 @@ const params = new URLSearchParams(window.location.search);
 const tab = params.get('tab');
 const hash = window.location.hash;
 
-console.log('[Main] Route check:', { pathname, tab, hash, isHome: !tab && !hash && pathname === '/' });
+console.log('[Main] Route check:', { pathname, tab, hash });
 
 // 对于所有非 Dashboard 路由，恢复 Portal 状态
 // 这确保从 Dashboard 导航到其他页面时，Portal 的 CSS 和元素正确恢复
@@ -157,8 +159,34 @@ if (pathname !== '/dashboard') {
   restorePortalState();
 }
 
+// ───── Route: /payment/success ─────
+if (pathname === '/payment/success') {
+  console.log('[Main] === PAYMENT SUCCESS ROUTE ===');
+  hideMainApp();
+  const mountEl = getMountPoint('payment-success-root');
+  const root = ReactDOM.createRoot(mountEl);
+  root.render(
+    <React.StrictMode>
+      <StripePaymentSuccess />
+    </React.StrictMode>
+  );
+}
+
+// ───── Route: /payment/cancel ─────
+else if (pathname === '/payment/cancel') {
+  console.log('[Main] === PAYMENT CANCEL ROUTE ===');
+  hideMainApp();
+  const mountEl = getMountPoint('payment-cancel-root');
+  const root = ReactDOM.createRoot(mountEl);
+  root.render(
+    <React.StrictMode>
+      <StripePaymentCancel />
+    </React.StrictMode>
+  );
+}
+
 // 首页：使用 HomePage 组件渲染
-if (!tab && !hash && pathname === '/') {
+else if (!tab && !hash && pathname === '/') {
   console.log('[Main] === HOME PAGE ROUTE ===');
 
   // 确保帮助中心隐藏

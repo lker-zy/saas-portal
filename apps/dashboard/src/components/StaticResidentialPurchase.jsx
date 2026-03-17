@@ -805,10 +805,24 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
       : (selectedDuration?.days ?? customDurationDays);
 
     // 确定实际支付方式
-    // 如果使用余额支付，则添加 balance 前缀
+    // 将前端支付方式ID转换为后端需要的格式
+    // stripe → stripe:card, wechat → stripe:wechat, alipay → stripe:alipay
+    const getStripePaymentMethod = (method) => {
+      switch (method) {
+        case 'stripe':
+          return 'stripe:card';
+        case 'wechat':
+          return 'stripe:wechat';
+        case 'alipay':
+          return 'stripe:alipay';
+        default:
+          return method;
+      }
+    };
+
     const actualPaymentMethod = useBalance
       ? `balance:${paymentMethod}`
-      : paymentMethod;
+      : getStripePaymentMethod(paymentMethod);
 
     const orderData = {
       country: selectedRegion.id,

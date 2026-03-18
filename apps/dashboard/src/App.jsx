@@ -2278,7 +2278,7 @@ const IPResourceManager = () => {
                   {group.orders.map(order => (
                      <div key={order.id} className="flex justify-between items-center bg-white p-3 rounded-lg border border-gray-100 text-sm">
                         <div className="flex items-center gap-3"><div className={`w-2 h-2 rounded-full ${order.status === 'active' ? 'bg-green-500' : 'bg-gray-300'}`}></div><span className="font-mono text-gray-600">{order.id}</span><span className="text-gray-900 font-medium">{order.region}</span></div>
-                        <div className="flex items-center gap-4 text-gray-500 text-xs"><span>{order.bandwidth}</span><span>到期: {order.expireDate}</span><span className="font-bold text-gray-700">{order.totalIps} IPs</span></div>
+                        <div className="flex items-center gap-4 text-gray-500 text-xs"><span>{order.bandwidth}</span><span>到期: {order.expireDate ? (order.expireDate instanceof Date ? order.expireDate.toLocaleDateString() : order.expireDate) : '-'}</span><span className="font-bold text-gray-700">{order.totalIps} IPs</span></div>
                      </div>
                   ))}
                </div>
@@ -2292,10 +2292,13 @@ const IPResourceManager = () => {
 };
 
 const OrderDetailView = ({ order, onBack, onExportOrder, onNavigateToSupport }) => {
+    // 调试日志
+    console.log('[OrderDetailView] Component rendered with order:', order);
+
     // Mock data for UI elements not in the main data object
     const trafficTotal = "1000 GB";
-    const trafficPercentage = 12.5; 
-    
+    const trafficPercentage = 12.5;
+
     return (
         <div className="space-y-6 animate-in fade-in duration-300 pb-10">
              {/* Top Navigation */}
@@ -2341,7 +2344,7 @@ const OrderDetailView = ({ order, onBack, onExportOrder, onNavigateToSupport }) 
                      </div>
                      <div className="space-y-1">
                          <div className="text-xs font-bold text-gray-400 flex items-center gap-1"><Calendar className="w-3.5 h-3.5"/> 到期</div>
-                         <div className="font-bold text-gray-900 text-lg">{order.expireDate || '-'}</div>
+                         <div className="font-bold text-gray-900 text-lg">{order.expireDate ? (order.expireDate instanceof Date ? order.expireDate.toLocaleDateString() : order.expireDate) : '-'}</div>
                      </div>
                      <div className="space-y-1">
                          <div className="text-xs font-bold text-gray-400 flex items-center gap-1"><Hash className="w-3.5 h-3.5"/> 数量</div>
@@ -2611,7 +2614,7 @@ const TicketDetailView = ({ ticket, onBack }) => {
                             </div>
                             <div>
                                 <div className="text-gray-400 mb-1">到期时间</div>
-                                <div className="font-medium text-gray-900">{relatedOrder.expireDate}</div>
+                                <div className="font-medium text-gray-900">{relatedOrder.expireDate ? (relatedOrder.expireDate instanceof Date ? relatedOrder.expireDate.toLocaleDateString() : relatedOrder.expireDate) : '-'}</div>
                             </div>
                             <div>
                                 <div className="text-gray-400 mb-1">IP 数量</div>
@@ -3842,7 +3845,111 @@ const App = () => {
       setActiveTab(tabParam);
     }
   }, []); // 不依赖 activeTab，只在组件挂载时执行一次
+
   const [selectedOrder, setSelectedOrder] = useState(null);
+
+  // 订单列表状态（用于从 URL 参数中查找订单）
+  const [ordersList, setOrdersList] = useState([]);
+  const [isLoadingOrders, setIsLoadingOrders] = useState(false);
+  const [processedOrderId, setProcessedOrderId] = useState(null);
+
+  // 监听 URL 参数 orderId，自动加载并选择对应的订单
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const orderIdParam = urlParams.get('orderId');
+
+    if (orderIdParam && orderIdParam !== processedOrderId) {
+      console.log('[Dashboard] URL orderId param detected:', orderIdParam);
+
+      // 标记已处理，避免重复处理
+      setProcessedOrderId(orderIdParam);
+
+      // 检查是否已经在订单列表中（支持数字 ID 和 DD- 开头的 ID）
+      const existingOrder = ordersList.find(o =>
+        o.id === orderIdParam ||
+        o.order_id === orderIdParam ||
+        o.numericId === orderIdParam ||
+        String(o.numericId) === orderIdParam ||
+        String(o.id) === orderIdParam
+      );
+      if (existingOrder) {
+        console.log('[Dashboard] Order found in local list:', existingOrder);
+        setSelectedOrder(existingOrder);
+        return;
+      }
+
+      // 如果订单列表为空，则加载订单列表
+      if (!isLoadingOrders && ordersList.length === 0) {
+        console.log('[Dashboard] Loading orders list to find order:', orderIdParam);
+        setIsLoadingOrders(true);
+
+        const loadOrdersAndSelect = async () => {
+          try {
+            const result = await orderService.getOrders({ page: 1, pageSize: 100 });
+            if (result.success) {
+              const orderList = result.data?.list || result.data || [];
+              console.log('[Dashboard] Orders loaded:', orderList.length);
+
+              // 转换订单数据格式（与 OrderListView 中的转换逻辑一致）
+              const mappedOrders = orderList.map(order => {
+                let bandwidth = '不限';
+                let traffic = '不限';
+                if (order.bandwidth_traffic) {
+                  const [bwType, bwValue] = order.bandwidth_traffic.split('/');
+                  if (bwType === 'bandwidth') bandwidth = bwValue === 'unlimited' ? '不限' : `${bwValue}Mbps`;
+                  else if (bwType === 'traffic') traffic = bwValue === 'unlimited' ? '不限' : `${bwValue}`;
+                }
+                const expireDate = order.expire_time ? new Date(order.expire_time) : null;
+
+                return {
+                  // 保存原始数字 ID 和 order_id，确保可以通过任一格式查找
+                  id: order.id || order.order_id,
+                  order_id: order.order_id || order.id,
+                  // 保存数字 ID（用于余额支付跳转）
+                  numericId: order.id,
+                  orderNo: order.order_no || order.order_id || order.id,
+                  typeLabel: order.template_name || order.resource_type || '静态住宅代理',
+                  region: order.country || order.region || 'Unknown',
+                  status: order.pay_status === 'paid' ? 'active' : (order.order_status || 'pending'),
+                  createdAt: order.created_at || order.create_time || order.purchase_time,
+                  amount: order.amount || 0,
+                  bandwidth: bandwidth,
+                  traffic: traffic,
+                  expireDate: expireDate,
+                  totalIps: order.quantity || order.ip_quantity || 0,
+                  protocol: order.protocol || 'HTTP',
+                };
+              });
+
+              setOrdersList(mappedOrders);
+
+              // 查找对应的订单（支持数字 ID 和 DD- 开头的 ID）
+              const targetOrder = mappedOrders.find(o =>
+                o.id === orderIdParam ||
+                o.order_id === orderIdParam ||
+                o.numericId === orderIdParam ||
+                String(o.numericId) === orderIdParam ||
+                String(o.id) === orderIdParam
+              );
+              if (targetOrder) {
+                console.log('[Dashboard] Found target order:', targetOrder);
+                setSelectedOrder(targetOrder);
+              } else {
+                console.warn('[Dashboard] Order not found in loaded list:', orderIdParam);
+                console.log('[Dashboard] Available orders:', mappedOrders.map(o => ({ id: o.id, order_id: o.order_id, numericId: o.numericId })));
+              }
+            }
+          } catch (error) {
+            console.error('[Dashboard] Error loading orders:', error);
+          } finally {
+            setIsLoadingOrders(false);
+          }
+        };
+
+        loadOrdersAndSelect();
+      }
+    }
+  }, [processedOrderId]);
   const [wizardClient, setWizardClient] = useState(null);
   const [editingConfig, setEditingConfig] = useState(null);
   const [viewingConfigDetail, setViewingConfigDetail] = useState(null);
@@ -3989,6 +4096,11 @@ const App = () => {
   };
 
   const renderContent = () => {
+    // 调试日志：检查 selectedOrder 状态
+    if (activeTab === 'orders') {
+      console.log('[Dashboard] renderContent called with activeTab=orders, selectedOrder:', selectedOrder);
+    }
+
     switch(activeTab) {
       case 'home': return <HomeView />;
       case 'dashboard': 
@@ -4112,7 +4224,7 @@ const App = () => {
          <div className="flex-1 p-4 space-y-1">
             {sidebarMenu.map(item => (
                !item.children ? (
-                <button key={item.id} onClick={() => { setActiveTab(item.id); setSelectedOrder(null); setSupportDraft(null); }} 
+                <button key={item.id} onClick={() => { setActiveTab(item.id); if (item.id !== 'orders') setSelectedOrder(null); setSupportDraft(null); }} 
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-300 
                     ${activeTab === item.id 
                       ? (isDashboard 

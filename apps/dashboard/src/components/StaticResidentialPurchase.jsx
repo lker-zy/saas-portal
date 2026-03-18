@@ -851,9 +851,35 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
       actualPaymentMethod,
       // onSuccess callback
       (data) => {
-        console.log('Purchase successful:', data);
-        alert(`购买成功！订单号: ${data.orderNo}\n支付金额: ¥${data.actualPay || data.amount}`);
-        setIsProcessingPayment(false);
+        console.log('[Purchase] onSuccess callback triggered with data:', data);
+        console.log('[Purchase] actualPaymentMethod:', actualPaymentMethod);
+
+        // 余额支付成功后，跳转到订单详情页面
+        // 检查是否是余额支付（balance:* 格式）
+        const isBalancePayment = actualPaymentMethod === 'balance' || actualPaymentMethod.startsWith('balance:');
+        console.log('[Purchase] isBalancePayment:', isBalancePayment);
+
+        if (isBalancePayment) {
+          // 余额支付成功后跳转到订单详情
+          console.log('[Purchase] Balance payment successful, redirecting to order detail:', data.orderId);
+          // 清除 sessionStorage 中的 pending_order_id（避免混淆）
+          sessionStorage.removeItem('pending_order_id');
+          sessionStorage.removeItem('pending_order_no');
+
+          // 跳转到订单详情页面
+          const redirectUrl = `/dashboard?tab=orders&orderId=${data.orderId}`;
+          console.log('[Purchase] Redirecting to:', redirectUrl);
+
+          // 使用 setTimeout 确保在下一个事件循环中执行跳转
+          setTimeout(() => {
+            window.location.href = redirectUrl;
+          }, 100);
+        } else {
+          // Stripe 支付会在 usePurchaseFlow 中处理跳转，这里只显示提示
+          console.log('[Purchase] Non-balance payment, showing alert');
+          alert(`购买成功！订单号: ${data.orderNo}\n支付金额: ¥${data.actualPay || data.amount}`);
+          setIsProcessingPayment(false);
+        }
       },
       // onError callback
       (error) => {

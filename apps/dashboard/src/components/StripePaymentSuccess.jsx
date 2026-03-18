@@ -8,11 +8,12 @@ import { CheckCircle, Receipt } from 'lucide-react';
  */
 export const StripePaymentSuccess = () => {
   // 版本标识：用于确认代码是否被更新
-  const COMPONENT_VERSION = 'v3.0-' + Date.now();
+  const COMPONENT_VERSION = 'v3.1-' + Date.now();
   console.log('[PaymentSuccess ' + COMPONENT_VERSION + '] Component rendering...');
 
   const [countdown, setCountdown] = useState(3);
   const [orderId, setOrderId] = useState(null);
+  const [debugInfo, setDebugInfo] = useState(null);
 
   useEffect(() => {
     console.log('[PaymentSuccess] Component mounted');
@@ -49,6 +50,24 @@ export const StripePaymentSuccess = () => {
     } else {
       console.warn('[PaymentSuccess] No pending_order_id found!');
     }
+
+    // 计算跳转 URL 并设置调试信息
+    const redirectUrl = pendingOrderId
+      ? `/dashboard?tab=orders&orderId=${pendingOrderId}`
+      : '/dashboard?tab=orders';
+
+    setDebugInfo({
+      sessionId,
+      pendingOrderId,
+      redirectUrl,
+      sessionStorageKeys: typeof sessionStorage !== 'undefined' ? Object.keys(sessionStorage) : [],
+      timestamp: new Date().toISOString()
+    });
+
+    console.log('[PaymentSuccess] Debug info:', {
+      pendingOrderId,
+      redirectUrl
+    });
 
     // 倒计时跳转
     const timer = setInterval(() => {
@@ -119,7 +138,7 @@ export const StripePaymentSuccess = () => {
 
           {/* 倒计时提示 */}
           <div
-            className="rounded-xl p-4 mb-6 border"
+            className="rounded-xl p-4 mb-4 border"
             style={{
               backgroundColor: '#f0fdf4',
               borderColor: '#bbf7d0',
@@ -133,6 +152,23 @@ export const StripePaymentSuccess = () => {
               </span>
             </div>
           </div>
+
+          {/* 调试信息区域 */}
+          {debugInfo && (
+            <div
+              className="rounded-xl p-4 mb-6 border border-dashed border-gray-300 bg-gray-50 text-left"
+              style={{ fontSize: '12px', fontFamily: 'monospace' }}
+            >
+              <div className="font-bold text-gray-700 mb-2 border-b border-gray-300 pb-1">🔍 调试信息</div>
+              <div className="space-y-1">
+                <div><span className="font-semibold text-gray-600">Session ID:</span> {debugInfo.sessionId || 'N/A'}</div>
+                <div><span className="font-semibold text-gray-600">订单 ID:</span> {debugInfo.pendingOrderId || <span className="text-red-600">❌ 未找到</span>}</div>
+                <div><span className="font-semibold text-gray-600">跳转 URL:</span> {debugInfo.redirectUrl}</div>
+                <div><span className="font-semibold text-gray-600">SessionStorage Keys:</span> {debugInfo.sessionStorageKeys.length > 0 ? debugInfo.sessionStorageKeys.join(', ') : <span className="text-red-600">❌ 空</span>}</div>
+                <div className="text-gray-400 text-xs mt-2">时间: {debugInfo.timestamp}</div>
+              </div>
+            </div>
+          )}
 
           {/* 立即查看按钮 */}
           <button

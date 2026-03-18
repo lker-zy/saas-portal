@@ -128,7 +128,7 @@ export const StripePaymentSuccess = () => {
 
           {/* 标题 */}
           <h1 className="text-3xl font-bold text-gray-900 mb-3">
-            Stripe 支付成功！
+            🎉 Stripe 支付成功 - 调试版本
           </h1>
 
           {/* 说明文字 */}

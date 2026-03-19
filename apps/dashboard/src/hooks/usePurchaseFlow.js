@@ -77,6 +77,7 @@ export const usePurchaseFlow = () => {
 
       // 步骤3: 激活订单（仅余额支付且后端未处理时）
       // 支付方式可能是 "balance" 或 "balance:xxx" 格式
+      /*
       const isBalancePayment = paymentMethod === 'balance' || paymentMethod.startsWith('balance:');
       if (isBalancePayment && !isDeploymentHandled) {
         console.log('Applying order:', orderId);
@@ -91,6 +92,7 @@ export const usePurchaseFlow = () => {
       } else if (isDeploymentHandled) {
         console.log('Deployment already handled by backend');
       }
+      */
 
       // 成功回调
       if (onSuccess) {

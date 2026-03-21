@@ -8,6 +8,7 @@ import {
 import { productService } from '../services/productService';
 import { paymentService } from '../services/paymentService';
 import orderService from '../services/orderService';
+import couponService from '../services/couponService';
 import { useAuth } from '../contexts/AuthContext';
 import { usePurchaseFlow } from '../hooks/usePurchaseFlow';
 
@@ -944,34 +945,43 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
   const finalPayUSDT = (finalPayAmount * 7.2 / USDT_EXCHANGE_RATE).toFixed(2);
   const selectedNetwork = USDT_NETWORKS.find(n => n.id === usdtNetwork) || USDT_NETWORKS[0];
 
-  // Credits & Promotion codes (enterprise-grade, aligned with CouponCenter)
-  const AVAILABLE_CREDITS = {
-    'WELCOME10':    { discountPercent: 10, label: '新用户欢迎礼',   description: '首次购买 10% 折扣',  minSpend: 0,  expiry: '2026-12-31' },
-    'VIP20':        { discountPercent: 20, label: 'VIP 专属折扣',    description: 'VIP 专享 20% 折扣',  minSpend: 50, expiry: '2026-06-30' },
-    'SAVE15':       { discountPercent: 15, label: '限时促销折扣',    description: '满 $30 享 15% 折扣', minSpend: 30, expiry: '2026-03-31' },
-    'REFERRAL-10USD': { discountPercent: 0, fixedDiscount: 10, label: '推荐奖励额度', description: '$10 额度抵扣', minSpend: 50, expiry: '2026-11-30' },
-  };
-
-  const handleApplyCoupon = () => {
+  const handleApplyCoupon = async () => {
     if (!couponCode.trim()) return;
     setCouponError('');
     setIsValidatingCoupon(true);
-    // Simulate API validation
-    setTimeout(() => {
+
+    try {
       const code = couponCode.trim().toUpperCase();
-      const found = AVAILABLE_CREDITS[code];
-      if (!found) {
-        setCouponError('无效的促销代码。请检查后重试。');
-        setCouponApplied(null);
-      } else if (found.minSpend > 0 && totalUSDValue < found.minSpend) {
-        setCouponError(`此代码要求最低消费 $${found.minSpend}，当前订单金额不足。`);
-        setCouponApplied(null);
+      const result = await couponService.validateCoupon(code, totalUSDValue);
+
+      if (result.success && result.data) {
+        const couponData = result.data;
+        const appliedCoupon = couponService.formatCouponForDisplay(couponData);
+
+        // 检查优惠券是否可用
+        if (!couponData.valid || !couponData.canUse) {
+          setCouponError(couponData.reason || '优惠券不可用');
+          setCouponApplied(null);
+        }
+        // 检查最低消费门槛
+        else if (appliedCoupon.minSpend > 0 && totalUSDValue < appliedCoupon.minSpend) {
+          setCouponError(`此代码要求最低消费 $${appliedCoupon.minSpend}，当前订单金额不足。`);
+          setCouponApplied(null);
+        } else {
+          setCouponApplied(appliedCoupon);
+          setCouponError('');
+        }
       } else {
-        setCouponApplied({ code, ...found });
-        setCouponError('');
+        setCouponError(result.error || '无效的促销代码。请检查后重试。');
+        setCouponApplied(null);
       }
+    } catch (error) {
+      console.error('验证优惠券失败:', error);
+      setCouponError('验证优惠券失败，请稍后重试');
+      setCouponApplied(null);
+    } finally {
       setIsValidatingCoupon(false);
-    }, 500);
+    }
   };
 
   const handleRemoveCoupon = () => {

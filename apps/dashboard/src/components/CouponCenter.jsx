@@ -1,12 +1,12 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { 
-  Search, 
-  Copy, 
+import {
+  Search,
+  Copy,
   Check,
-  CheckCircle2, 
-  AlertCircle, 
-  Clock, 
+  CheckCircle2,
+  AlertCircle,
+  Clock,
   ArrowRight,
   Tag,
   CreditCard,
@@ -20,8 +20,10 @@ import {
   Percent,
   DollarSign,
   X,
-  Filter
+  Filter,
+  Loader2
 } from 'lucide-react';
+import clientAPI from '../api/client';
 
 const CouponCenter = () => {
   const { t } = useTranslation();
@@ -31,139 +33,81 @@ const CouponCenter = () => {
   const [copiedCode, setCopiedCode] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedId, setExpandedId] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [coupons, setCoupons] = useState([]);
 
   /* ════════════════════════════════════════════
-     MOCK DATA — Aligned with Header & Order Page
+     DATA FETCHING — 从后端API获取优惠券数据
      ════════════════════════════════════════════ */
-  const credits = [
-    {
-      id: 'CR-001',
-      code: 'WELCOME10',
-      type: 'percentage',
-      value: 10,
-      title: 'New User Welcome Credit',
-      titleZh: '新用户欢迎礼',
-      description: '首次购买静态住宅 ISP 代理可享 10% 折扣，无门槛。',
-      descriptionEn: '10% off your first Static Residential ISP proxy purchase. No minimum.',
-      originalAmount: null,      // percentage type — no fixed dollar amount
-      remainingAmount: null,
-      minSpend: 0,
-      maxDiscount: 50,           // cap at $50
-      issuedDate: '2026-01-01',
-      expiryDate: '2026-12-31',
-      status: 'active',
-      scope: ['Static ISP', 'Dynamic ISP'],
-      source: 'system',
-      usageCount: 0,
-      usageLimit: 1,
-    },
-    {
-      id: 'CR-002',
-      code: 'VIP20',
-      type: 'percentage',
-      value: 20,
-      title: 'VIP Exclusive Discount',
-      titleZh: 'VIP 专属折扣',
-      description: 'VIP 用户专享 20% 折扣，适用于所有代理产品。',
-      descriptionEn: '20% off all proxy products. Exclusive for VIP members.',
-      originalAmount: null,
-      remainingAmount: null,
-      minSpend: 50,
-      maxDiscount: 200,
-      issuedDate: '2026-02-01',
-      expiryDate: '2026-06-30',
-      status: 'active',
-      scope: ['All Products'],
-      source: 'tier-upgrade',
-      usageCount: 0,
-      usageLimit: 3,
-    },
-    {
-      id: 'CR-003',
-      code: 'SAVE15',
-      type: 'percentage',
-      value: 15,
-      title: 'Limited-Time Promotion',
-      titleZh: '限时促销折扣',
-      description: '限时 15% 折扣，订单满 $30 即可使用。',
-      descriptionEn: '15% off orders over $30. Limited time offer.',
-      originalAmount: null,
-      remainingAmount: null,
-      minSpend: 30,
-      maxDiscount: 100,
-      issuedDate: '2026-01-15',
-      expiryDate: '2026-03-31',
-      status: 'active',
-      scope: ['Static ISP', 'Datacenter'],
-      source: 'promotion',
-      usageCount: 0,
-      usageLimit: 1,
-    },
-    {
-      id: 'CR-004',
-      code: 'REFERRAL-10USD',
-      type: 'fixed',
-      value: 10,
-      title: 'Referral Reward',
-      titleZh: '推荐奖励额度',
-      description: '通过邀请好友获得 $10.00 账户抵扣额度。',
-      descriptionEn: '$10 account credit earned from referral program.',
-      originalAmount: 10,
-      remainingAmount: 10,
-      minSpend: 50,
-      maxDiscount: 10,
-      issuedDate: '2025-11-20',
-      expiryDate: '2026-11-30',
-      status: 'active',
-      scope: ['All Products'],
-      source: 'referral',
-      usageCount: 0,
-      usageLimit: 1,
-    },
-    {
-      id: 'CR-005',
-      code: 'BFRIDAY50',
-      type: 'percentage',
-      value: 50,
-      title: 'Black Friday Special',
-      titleZh: 'Black Friday 特惠',
-      description: '黑五限定 50% 折扣，仅限数据中心产品。',
-      descriptionEn: '50% off Datacenter proxies. Black Friday exclusive.',
-      originalAmount: null,
-      remainingAmount: null,
-      minSpend: 100,
-      maxDiscount: 500,
-      issuedDate: '2025-11-25',
-      expiryDate: '2025-12-01',
-      status: 'expired',
-      scope: ['Datacenter'],
-      source: 'promotion',
-      usageCount: 0,
-      usageLimit: 1,
-    },
-    {
-      id: 'CR-006',
-      code: 'SUMMER5',
-      type: 'fixed',
-      value: 5,
-      title: 'Summer Promotion',
-      titleZh: '夏季促销额度',
-      description: '$5 抵扣额度，已于 2025-08-20 使用。',
-      descriptionEn: '$5 credit, used on Aug 20, 2025.',
-      originalAmount: 5,
-      remainingAmount: 0,
-      minSpend: 20,
-      maxDiscount: 5,
-      issuedDate: '2025-06-01',
-      expiryDate: '2025-09-15',
-      status: 'used',
-      usedDate: '2025-08-20',
-      scope: ['All Products'],
-      source: 'promotion',
-      usageCount: 1,
-      usageLimit: 1,
-    },
-  ];
+  useEffect(() => {
+    fetchCoupons();
+  }, []);
+
+  const fetchCoupons = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await clientAPI.getCoupons();
+
+      // 检查是否是401未授权错误
+      if (response.code === 401) {
+        setError('请先登录以查看优惠券');
+        setCoupons([]);
+        return;
+      }
+
+      // 处理API响应 - 支持不同的响应格式
+      let couponData = null;
+      if (response.data && response.data.data) {
+        couponData = response.data.data;
+      } else if (response.data && Array.isArray(response.data)) {
+        couponData = response.data;
+      } else if (Array.isArray(response)) {
+        couponData = response;
+      }
+
+      if (couponData && Array.isArray(couponData)) {
+        const transformedCoupons = couponData.map(item => {
+          // 后端返回嵌套结构: { coupon: {...}, status, expiresAt, ... }
+          const coupon = item.coupon || {};
+          return {
+            id: `CPN-${coupon.id || item.id}`,
+            code: coupon.code || '',
+            type: coupon.type === 'amount_off' ? 'fixed' : 'percentage',
+            value: coupon.discountValue || 0,
+            title: coupon.name || '优惠券',
+            titleZh: coupon.name || '优惠券',
+            titleEn: coupon.name || 'Coupon',
+            description: coupon.name || '优惠券',
+            descriptionEn: coupon.name || 'Coupon',
+            originalAmount: coupon.type === 'amount_off' ? coupon.discountValue : null,
+            remainingAmount: coupon.type === 'amount_off' ? coupon.discountValue : null,
+            minSpend: coupon.threshold || 0,
+            maxDiscount: coupon.discountValue || 0,
+            issuedDate: item.claimTime ? item.claimTime.split('T')[0] : new Date().toISOString().split('T')[0],
+            expiryDate: item.expiresAt ? (typeof item.expiresAt === 'string' ? item.expiresAt.split('T')[0] : new Date(item.expiresAt).toISOString().split('T')[0]) : '',
+            status: item.status || 'unknown',
+            scope: ['All Products'],
+            source: 'system',
+            usageCount: 0,
+            usageLimit: 1,
+            canUse: item.canUse || false,
+            reason: item.cannotUseReason || item.reason || ''
+          };
+        });
+        setCoupons(transformedCoupons);
+      }
+    } catch (err) {
+      console.error('获取优惠券失败:', err);
+      setError('获取优惠券失败，请稍后重试');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 使用后端数据
+  const credits = coupons;
 
   /* ══ Derived Data ══ */
   const summary = useMemo(() => {
@@ -199,22 +143,39 @@ const CouponCenter = () => {
   }, [credits, activeTab, searchQuery]);
 
   /* ══ Handlers ══ */
-  const handleRedeem = (e) => {
+  const handleRedeem = async (e) => {
     e.preventDefault();
     if (!redeemCode.trim()) return;
+
     setRedeemStatus('processing');
-    setTimeout(() => {
-      const valid = credits.some(c => c.code === redeemCode.trim().toUpperCase());
-      if (redeemCode.toUpperCase() === 'NEWCODE50') {
+
+    try {
+      // 检查是否已存在
+      const existing = credits.find(c => c.code === redeemCode.trim().toUpperCase());
+      if (existing) {
+        setRedeemStatus('duplicate');
+        setTimeout(() => setRedeemStatus(null), 4000);
+        return;
+      }
+
+      // 调用后端API验证优惠券
+      const response = await clientAPI.validateCoupon(redeemCode.trim().toUpperCase(), 0);
+
+      if (response.data && (response.data.valid || response.data.canUse)) {
         setRedeemStatus('success');
         setRedeemCode('');
-      } else if (valid) {
-        setRedeemStatus('duplicate');
+        // 重新获取优惠券列表
+        await fetchCoupons();
       } else {
         setRedeemStatus('error');
       }
+
       setTimeout(() => setRedeemStatus(null), 4000);
-    }, 800);
+    } catch (err) {
+      console.error('验证优惠券失败:', err);
+      setRedeemStatus('error');
+      setTimeout(() => setRedeemStatus(null), 4000);
+    }
   };
 
   const handleCopy = (code) => {
@@ -265,26 +226,51 @@ const CouponCenter = () => {
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-10 max-w-6xl mx-auto">
 
-      {/* ── Page Header ── */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-            额度与优惠
-          </h1>
-          <p className="text-sm text-gray-500 mt-0.5">管理您的促销额度、折扣码和推荐奖励。</p>
+      {/* ── Loading State ── */}
+      {loading && (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="w-8 h-8 text-[#1A73E8] animate-spin" />
+          <span className="ml-3 text-sm text-gray-600">加载优惠券...</span>
         </div>
-        <a
-          href="#"
-          className="text-sm text-[#1A73E8] hover:text-blue-800 font-medium flex items-center gap-1 transition-colors"
-          onClick={(e) => e.preventDefault()}
-        >
-          了解促销政策
-          <ExternalLink className="w-3.5 h-3.5" />
-        </a>
-      </div>
+      )}
+
+      {/* ── Error State ── */}
+      {error && !loading && (
+        <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-xl">
+          <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm text-red-700">{error}</p>
+          </div>
+          <button
+            onClick={fetchCoupons}
+            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
+          >
+            重试
+          </button>
+        </div>
+      )}
+
+      {/* ── Page Header ── */}
+      {!loading && (
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+              额度与优惠
+            </h1>
+            <p className="text-sm text-gray-500 mt-0.5">管理您的促销额度、折扣码和推荐奖励。</p>
+          </div>
+          <button
+            onClick={fetchCoupons}
+            className="text-sm text-[#1A73E8] hover:text-blue-800 font-medium flex items-center gap-1 transition-colors"
+          >
+            刷新
+          </button>
+        </div>
+      )}
 
       {/* ── Summary Cards (GCP Billing Style) ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {!loading && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <SummaryCard
           icon={<CreditCard className="w-5 h-5 text-[#1A73E8]" />}
           label="可用额度"
@@ -313,10 +299,13 @@ const CouponCenter = () => {
           sublabel="历史已使用额度"
           accent="violet"
         />
-      </div>
+        </div>
+      )}
+      )}
 
       {/* ── Redeem Code (AWS Style) ── */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
+      {!loading && (
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex-1">
             <h3 className="text-sm font-semibold text-gray-900 mb-1 flex items-center gap-2">
@@ -361,10 +350,12 @@ const CouponCenter = () => {
             {redeemStatus === 'error' && '促销代码无效或已过期，请检查后重试。'}
           </div>
         )}
-      </div>
+        </div>
+      )}
 
       {/* ── Filter Bar ── */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      {!loading && (
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           {/* Tabs */}
           <div className="flex items-center gap-1">
@@ -598,17 +589,20 @@ const CouponCenter = () => {
             <span>额度在结算时自动校验</span>
           </div>
         </div>
-      </div>
+        </div>
+      )}
 
       {/* ── Help Note (AWS Style) ── */}
-      <div className="flex items-start gap-3 p-4 bg-blue-50/50 border border-blue-100 rounded-xl">
+      {!loading && (
+        <div className="flex items-start gap-3 p-4 bg-blue-50/50 border border-blue-100 rounded-xl">
         <Info className="w-4 h-4 text-[#1A73E8] mt-0.5 shrink-0" />
         <div className="text-xs text-gray-600 leading-relaxed">
           <strong className="text-gray-800">关于额度与优惠</strong> — 促销额度和折扣码可在结算页的「促销代码」输入框中使用。
           百分比折扣直接从订单金额中扣减；固定金额额度将从应付金额中抵扣。多张额度不可叠加使用，系统将自动选择最优方案。
           如有疑问，请联系 <a href="#" className="text-[#1A73E8] hover:underline">客服支持</a>。
         </div>
-      </div>
+        </div>
+      )}
     </div>
   );
 };

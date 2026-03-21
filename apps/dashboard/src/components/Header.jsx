@@ -1,12 +1,12 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { 
-  Bell, 
-  Globe, 
-  Settings, 
-  LogOut, 
-  User, 
-  HelpCircle, 
+import {
+  Bell,
+  Globe,
+  Settings,
+  LogOut,
+  User,
+  HelpCircle,
   RefreshCw,
   Copy,
   Check,
@@ -17,6 +17,7 @@ import {
   ExternalLink,
   Link
 } from 'lucide-react';
+import couponService from '../services/couponService';
 
 /* ── 读取统一余额（与 inviteSystem 共享 localStorage） ── */
 const STORAGE_KEY = 'sales_invite_system_v1';
@@ -46,6 +47,8 @@ const Header = ({
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedCreditCode, setCopiedCreditCode] = useState(false);
   const [dismissedPromo, setDismissedPromo] = useState(false);
+  const [availableCredits, setAvailableCredits] = useState([]);
+  const [loadingCredits, setLoadingCredits] = useState(true);
   const dropdownRef = useRef(null);
 
   // 定时刷新余额（与 inviteSystem 同步）
@@ -57,16 +60,51 @@ const Header = ({
   const unifiedUser = useMemo(() => getUnifiedUserData(user.email), [user.email, balanceTick]);
   const displayBalance = unifiedUser ? (Number(unifiedUser.balance) || 0) : user.balance;
 
-  // Available credits summary — linked with CouponCenter data
-  const availableCredits = [
-    { code: 'WELCOME10', type: 'percentage', value: 10, label: '新用户欢迎礼', expiry: '2026-12-31' },
-    { code: 'VIP20', type: 'percentage', value: 20, label: 'VIP 专属折扣', expiry: '2026-06-30' },
-    { code: 'SAVE15', type: 'percentage', value: 15, label: '限时促销折扣', expiry: '2026-03-31' },
-    { code: 'REFERRAL-10USD', type: 'fixed', value: 10, label: '推荐奖励额度', expiry: '2026-11-30' },
-  ];
+  // Load credits from backend API
+  useEffect(() => {
+    const loadCredits = async () => {
+      try {
+        setLoadingCredits(true);
+        const result = await couponService.getCoupons();
+        if (result.success && result.data) {
+          // Transform backend data to header format
+          const credits = Array.isArray(result.data)
+            ? result.data.map(item => {
+                const coupon = item.coupon || {};
+                return {
+                  code: coupon.code || '',
+                  type: coupon.type === 'amount_off' ? 'fixed' : 'percentage',
+                  value: coupon.discountValue || 0,
+                  label: coupon.name || '优惠券',
+                  expiry: item.expiresAt ? (typeof item.expiresAt === 'string' ? item.expiresAt.split('T')[0] : new Date(item.expiresAt).toISOString().split('T')[0]) : '',
+                  status: item.status || 'unknown',
+                  canUse: item.canUse || false,
+                };
+              })
+            : [];
+          // Only show available/active coupons
+          setAvailableCredits(credits.filter(c => c.status === 'active' || c.status === 'claimed'));
+        } else {
+          setAvailableCredits([]);
+        }
+      } catch (error) {
+        console.error('Failed to load credits:', error);
+        setAvailableCredits([]);
+      } finally {
+        setLoadingCredits(false);
+      }
+    };
+
+    loadCredits();
+  }, []);
+
   const creditsCount = availableCredits.length;
-  const bestPercentOff = Math.max(...availableCredits.filter(c => c.type === 'percentage').map(c => c.value));
-  const totalFixedCredit = availableCredits.filter(c => c.type === 'fixed').reduce((sum, c) => sum + c.value, 0);
+  const bestPercentOff = availableCredits.length > 0
+    ? Math.max(...availableCredits.filter(c => c.type === 'percentage').map(c => c.value), 0)
+    : 0;
+  const totalFixedCredit = availableCredits
+    .filter(c => c.type === 'fixed')
+    .reduce((sum, c) => sum + c.value, 0);
 
   const handleCopyCreditCode = (e, code) => {
     e.stopPropagation();

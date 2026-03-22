@@ -153,6 +153,52 @@ export const orderAPI = {
    */
   getAfterSaleTickets: (filters) =>
     axios.post('/order/internal/after-sale/list', filters),
+
+  // ==================== 订阅/自动续费 ====================
+
+  /**
+   * 获取订单订阅信息
+   * @param {number} orderId - 订单ID
+   * @returns {Promise} { auto_renew_enabled, renew_duration_days, next_renew_at, subscription_id, last_renewed_at }
+   */
+  getSubscriptionInfo: (orderId) =>
+    axios.get('/order/subscription/info', {
+      params: { order_id: orderId },
+    }),
+
+  /**
+   * 开启自动续费
+   * @param {number} orderId - 订单ID
+   * @param {number} renewDurationDays - 续费周期（天数）
+   * @returns {Promise} { success, message, auto_renew, next_renew_at }
+   */
+  enableAutoRenew: (orderId, renewDurationDays = 30) => {
+    // 确保 orderId 是数字类型
+    const numericOrderId = typeof orderId === 'string' ? parseInt(orderId) : orderId;
+    console.log('[orderAPI.enableAutoRenew] orderId:', orderId, '-> numericOrderId:', numericOrderId, 'type:', typeof numericOrderId);
+
+    return axios.post('/order/subscription/enable', {
+      order_id: numericOrderId,
+      renew_duration_days: renewDurationDays,
+    });
+  },
+
+  /**
+   * 关闭自动续费
+   * @param {number} orderId - 订单ID
+   * @param {string} subscriptionId - 第三方订阅ID（可选）
+   * @returns {Promise} { success, message, auto_renew }
+   */
+  disableAutoRenew: (orderId, subscriptionId) => {
+    // 确保 orderId 是数字类型
+    const numericOrderId = typeof orderId === 'string' ? parseInt(orderId) : orderId;
+    console.log('[orderAPI.disableAutoRenew] orderId:', orderId, '-> numericOrderId:', numericOrderId, 'type:', typeof numericOrderId);
+
+    return axios.post('/order/subscription/disable', {
+      order_id: numericOrderId,
+      subscription_id: subscriptionId,
+    });
+  },
 };
 
 export default orderAPI;

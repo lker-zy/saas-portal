@@ -1910,7 +1910,11 @@ const OrderListView = ({ onSelectOrder, onExportAll, onNavigateToSupport }) => {
               }
 
               const mappedOrder = {
-                id: order.order_id || order.id || order.orderId,
+                // 保存原始数字 ID 和 order_id，确保可以通过任一格式查找
+                id: order.id || order.order_id,  // 优先使用数字类型的 id
+                order_id: order.order_id || order.id,  // 保存 order_id（字符串）
+                numericId: order.id,  // 保存数字 ID（用于 API 调用）
+                orderNo: order.order_no || order.order_id || order.id,
                 typeLabel: order.product_name || order.template_name || '静态住宅 ISP',
                 region: order.country || 'US',
                 status: order.pay_status === 'paid' ? 'active' : (order.order_status || 'pending'),
@@ -1924,6 +1928,12 @@ const OrderListView = ({ onSelectOrder, onExportAll, onNavigateToSupport }) => {
                 supportedProtocols: supportedProtocols,
                 trafficUsed: order.traffic_used || '0',
                 protocol: order.protocol || 'HTTP',
+                // 订阅/自动续费信息
+                autoRenewEnabled: order.auto_renew_enabled || false,
+                renewDurationDays: order.renew_duration_days || 30,
+                nextRenewAt: order.next_renew_at ? new Date(order.next_renew_at) : null,
+                subscriptionId: order.subscription_id || '',
+                lastRenewedAt: order.last_renewed_at ? new Date(order.last_renewed_at) : null,
                 // 使用条款和授权范围（根据业务类型动态生成）
                 terms: getTermsOfUse(order.business_type || order.scenario),
                 scope: getAuthorizationScope(order.business_type || order.scenario),
@@ -1950,7 +1960,17 @@ const OrderListView = ({ onSelectOrder, onExportAll, onNavigateToSupport }) => {
     }, []);
 
     const filteredOrders = useMemo(() => {
-      return orders.filter(order => order.id.toLowerCase().includes(searchText.toLowerCase()) || order.region.toLowerCase().includes(searchText.toLowerCase()));
+      const searchLower = searchText.toLowerCase();
+      return orders.filter(order => {
+        // 搜索 id（可能是数字或字符串）
+        const idMatch = String(order.id).toLowerCase().includes(searchLower) ||
+                        String(order.order_id || '').toLowerCase().includes(searchLower);
+        // 搜索 region
+        const regionMatch = order.region.toLowerCase().includes(searchLower);
+        // 搜索 orderNo
+        const orderNoMatch = order.orderNo && order.orderNo.toLowerCase().includes(searchLower);
+        return idMatch || regionMatch || orderNoMatch;
+      });
     }, [searchText, orders]);
 
     // Show loading state
@@ -2002,7 +2022,11 @@ const OrderListView = ({ onSelectOrder, onExportAll, onNavigateToSupport }) => {
             <div key={order.id} className="group bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-all cursor-pointer" onClick={() => onSelectOrder(order)}>
                <div className="flex flex-col lg:flex-row gap-6 items-start lg:items-center justify-between">
                   <div className="space-y-3 flex-1">
-                     <div className="flex items-center gap-3"><span className="font-mono text-sm text-gray-500">{order.id}</span><StatusBadge status={order.status} /></div>
+                     <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs text-gray-400">#{order.id}</span>
+                        <span className="font-mono text-sm text-gray-600">{order.order_id || order.orderNo || '-'}</span>
+                        <StatusBadge status={order.status} />
+                     </div>
                      <div className="flex items-center gap-2"><h3 className="text-lg font-bold text-gray-900">{order.typeLabel}</h3><span className="text-gray-300">|</span><span className="text-gray-600 flex items-center gap-1 text-sm"><Globe className="w-3.5 h-3.5"/> {order.region}</span></div>
                   </div>
                   <div className="flex items-center gap-3">
@@ -2291,9 +2315,88 @@ const IPResourceManager = () => {
   );
 };
 
-const OrderDetailView = ({ order, onBack, onExportOrder, onNavigateToSupport }) => {
+const OrderDetailView = ({ order, onBack, onExportOrder, onNavigateToSupport, onOrderUpdate }) => {
     // 调试日志
     console.log('[OrderDetailView] Component rendered with order:', order);
+
+    // 订单状态
+    const [currentOrder, setCurrentOrder] = useState(order);
+    const [isToggling, setIsToggling] = useState(false);
+
+    // 当 order prop 变化时更新 currentOrder
+    useEffect(() => {
+        setCurrentOrder(order);
+    }, [order]);
+
+    // 切换自动续费
+    const handleToggleAutoRenew = async () => {
+        if (isToggling) return;
+
+        const newState = !currentOrder.autoRenewEnabled;
+        const confirmMessage = newState
+            ? `确定要开启自动续费吗？续费周期为 ${currentOrder.renewDurationDays || 30} 天`
+            : '确定要关闭自动续费吗？';
+
+        if (!window.confirm(confirmMessage)) {
+            return;
+        }
+
+        setIsToggling(true);
+
+        try {
+            // 获取数字类型的订单ID
+            const orderId = currentOrder.numericId || (typeof currentOrder.id === 'number' ? currentOrder.id : parseInt(currentOrder.id));
+
+            console.log('[ToggleAutoRenew] Current order:', currentOrder);
+            console.log('[ToggleAutoRenew] Using orderId:', orderId, 'Type:', typeof orderId);
+
+            if (!orderId || isNaN(orderId)) {
+                alert('订单ID无效，请刷新页面重试');
+                return;
+            }
+
+            let result;
+            if (newState) {
+                // 开启自动续费
+                result = await orderService.enableAutoRenew(
+                    orderId,
+                    currentOrder.renewDurationDays || 30
+                );
+            } else {
+                // 关闭自动续费
+                result = await orderService.disableAutoRenew(
+                    orderId,
+                    currentOrder.subscriptionId
+                );
+            }
+
+            console.log('[ToggleAutoRenew] API result:', result);
+
+            if (result.success) {
+                // 更新本地订单状态
+                const updatedOrder = {
+                    ...currentOrder,
+                    autoRenewEnabled: newState,
+                    nextRenewAt: newState && result.data?.next_renew_at ? new Date(result.data.next_renew_at) : null,
+                };
+                setCurrentOrder(updatedOrder);
+
+                alert(result.message || (newState ? '自动续费已开启' : '自动续费已关闭'));
+
+                // 通知父组件更新订单列表
+                if (onOrderUpdate) {
+                    onOrderUpdate(updatedOrder);
+                }
+            } else {
+                alert(result.message || '操作失败，请稍后重试');
+            }
+        } catch (error) {
+            console.error('Toggle auto renew error:', error);
+            alert('操作失败：' + (error.message || '网络错误'));
+        } finally {
+            setIsToggling(false);
+        }
+    };
 
     // Mock data for UI elements not in the main data object
     const trafficTotal = "1000 GB";
@@ -2314,15 +2417,18 @@ const OrderDetailView = ({ order, onBack, onExportOrder, onNavigateToSupport }) 
                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
                      <div>
                          <div className="flex items-center gap-3 mb-2">
-                             <h1 className="text-2xl font-bold text-gray-900">订单 #{order.id}</h1>
-                             <StatusBadge status={order.status} />
+                             <div className="flex items-center gap-2">
+                                 <h1 className="text-2xl font-bold text-gray-900">订单 #{currentOrder.id}</h1>
+                                 <span className="font-mono text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">{currentOrder.order_id || currentOrder.orderNo || '-'}</span>
+                             </div>
+                             <StatusBadge status={currentOrder.status} />
                          </div>
                          <div className="flex flex-wrap gap-2">
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-50 text-blue-700 text-xs font-bold border border-blue-100">
-                                <Shield className="w-3.5 h-3.5" /> {order.typeLabel}
+                                <Shield className="w-3.5 h-3.5" /> {currentOrder.typeLabel}
                             </span>
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-50 text-blue-700 text-xs font-bold border border-blue-100">
-                                <Globe className="w-3.5 h-3.5" /> {order.region}
+                                <Globe className="w-3.5 h-3.5" /> {currentOrder.region}
                             </span>
                          </div>
                      </div>
@@ -2340,21 +2446,21 @@ const OrderDetailView = ({ order, onBack, onExportOrder, onNavigateToSupport }) 
                  <div className="grid grid-cols-2 md:grid-cols-5 gap-6 border-t border-gray-100 pt-6 mb-8">
                      <div className="space-y-1">
                          <div className="text-xs font-bold text-gray-400 flex items-center gap-1"><Activity className="w-3.5 h-3.5"/> 带宽</div>
-                         <div className="font-bold text-gray-900 text-lg">{order.bandwidth || '-'}</div>
+                         <div className="font-bold text-gray-900 text-lg">{currentOrder.bandwidth || '-'}</div>
                      </div>
                      <div className="space-y-1">
                          <div className="text-xs font-bold text-gray-400 flex items-center gap-1"><Calendar className="w-3.5 h-3.5"/> 到期</div>
-                         <div className="font-bold text-gray-900 text-lg">{order.expireDate ? (order.expireDate instanceof Date ? order.expireDate.toLocaleDateString() : order.expireDate) : '-'}</div>
+                         <div className="font-bold text-gray-900 text-lg">{currentOrder.expireDate ? (currentOrder.expireDate instanceof Date ? currentOrder.expireDate.toLocaleDateString() : currentOrder.expireDate) : '-'}</div>
                      </div>
                      <div className="space-y-1">
                          <div className="text-xs font-bold text-gray-400 flex items-center gap-1"><Hash className="w-3.5 h-3.5"/> 数量</div>
-                         <div className="font-bold text-gray-900 text-lg">{order.totalIps || 0} IPs</div>
+                         <div className="font-bold text-gray-900 text-lg">{currentOrder.totalIps || 0} IPs</div>
                      </div>
                      <div className="space-y-1">
                          <div className="text-xs font-bold text-gray-400 flex items-center gap-1"><Layers className="w-3.5 h-3.5"/> 场景</div>
                          <div className="flex flex-wrap gap-1.5">
-                             {(order.scenarios || []).length > 0 ? (
-                                 (order.scenarios || []).map(s => (
+                             {(currentOrder.scenarios || []).length > 0 ? (
+                                 (currentOrder.scenarios || []).map(s => (
                                      <span key={s} className="px-1.5 py-0.5 border border-gray-200 rounded text-[10px] text-gray-600 bg-gray-50">{s}</span>
                                  ))
                              ) : (
@@ -2365,8 +2471,8 @@ const OrderDetailView = ({ order, onBack, onExportOrder, onNavigateToSupport }) 
                      <div className="space-y-1">
                          <div className="text-xs font-bold text-gray-400 flex items-center gap-1"><Network className="w-3.5 h-3.5"/> 协议</div>
                          <div className="flex flex-wrap gap-1.5">
-                             {(order.supportedProtocols || []).length > 0 ? (
-                                 (order.supportedProtocols || []).map(p => (
+                             {(currentOrder.supportedProtocols || []).length > 0 ? (
+                                 (currentOrder.supportedProtocols || []).map(p => (
                                      <span key={p} className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
                                          p === 'SOCKS5' ? 'bg-purple-50 text-purple-700 border border-purple-100' :
                                          p === 'HTTP' ? 'bg-blue-50 text-blue-700 border border-blue-100' :
@@ -2397,7 +2503,7 @@ const OrderDetailView = ({ order, onBack, onExportOrder, onNavigateToSupport }) 
                         <div className="mb-4">
                             <div className="flex justify-between text-sm mb-1">
                                 <span className="text-gray-500">已用流量</span>
-                                <span className="font-mono font-bold text-gray-900">{order.trafficUsed || '0'} / {trafficTotal}</span>
+                                <span className="font-mono font-bold text-gray-900">{currentOrder.trafficUsed || '0'} / {trafficTotal}</span>
                             </div>
                             <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                                 <div className="h-full bg-emerald-500 rounded-full" style={{width: `${trafficPercentage}%`}}></div>
@@ -2454,15 +2560,33 @@ const OrderDetailView = ({ order, onBack, onExportOrder, onNavigateToSupport }) 
                             </div>
                             <div className="flex justify-between items-center">
                                 <span className="text-gray-500">自动续费</span>
-                                <span className="text-xs text-emerald-600 font-medium">已开启</span>
+                                {currentOrder.autoRenewEnabled ? (
+                                    <span className="text-xs text-emerald-600 font-medium flex items-center gap-1">
+                                        <CheckCircle className="w-3 h-3"/> 已开启 ({currentOrder.renewDurationDays || 30}天)
+                                    </span>
+                                ) : (
+                                    <span className="text-xs text-gray-500 font-medium">未开启</span>
+                                )}
                             </div>
+                            {currentOrder.autoRenewEnabled && currentOrder.nextRenewAt && (
+                                <div className="flex justify-between">
+                                    <span className="text-gray-500">下次续费</span>
+                                    <span className="font-bold text-gray-900 text-xs">
+                                        {new Date(currentOrder.nextRenewAt).toLocaleDateString('zh-CN')}
+                                    </span>
+                                </div>
+                            )}
                         </div>
                         <div className="space-y-2">
                             <button className="w-full py-2 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 shadow-md shadow-blue-200 transition-colors flex items-center justify-center gap-2">
                                 <RefreshCw className="w-3 h-3"/> 立即续费
                             </button>
-                            <button className="w-full py-2 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 hover:bg-gray-50 transition-colors">
-                                变更套餐 / 协议
+                            <button
+                                onClick={handleToggleAutoRenew}
+                                disabled={isToggling}
+                                className="w-full py-2 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isToggling ? '处理中...' : (currentOrder.autoRenewEnabled ? '关闭自动续费' : '开启自动续费')}
                             </button>
                         </div>
                      </div>
@@ -2474,14 +2598,14 @@ const OrderDetailView = ({ order, onBack, onExportOrder, onNavigateToSupport }) 
                      <div>
                          <h4 className="text-sm font-bold text-gray-400 mb-2 flex items-center gap-2"><FileWarning className="w-4 h-4"/> 使用条款</h4>
                          <div className="bg-amber-50/50 border border-amber-100 rounded-lg p-4 text-xs leading-relaxed text-amber-900/80">
-                            {order.terms}
+                            {currentOrder.terms}
                          </div>
                      </div>
                      {/* Scope */}
                      <div>
                          <h4 className="text-sm font-bold text-gray-400 mb-2 flex items-center gap-2"><CheckCircle2 className="w-4 h-4"/> 授权范围</h4>
                          <div className="bg-blue-50/50 border border-blue-100 rounded-lg p-4 text-xs leading-relaxed text-slate-700">
-                             <div className="whitespace-pre-line">{order.scope}</div>
+                             <div className="whitespace-pre-line">{currentOrder.scope}</div>
                          </div>
                      </div>
                  </div>
@@ -3918,6 +4042,12 @@ const App = () => {
                   expireDate: expireDate,
                   totalIps: order.quantity || order.ip_quantity || 0,
                   protocol: order.protocol || 'HTTP',
+                  // 订阅/自动续费信息
+                  autoRenewEnabled: order.auto_renew_enabled || false,
+                  renewDurationDays: order.renew_duration_days || 30,
+                  nextRenewAt: order.next_renew_at ? new Date(order.next_renew_at) : null,
+                  subscriptionId: order.subscription_id || '',
+                  lastRenewedAt: order.last_renewed_at ? new Date(order.last_renewed_at) : null,
                 };
               });
 
@@ -4132,7 +4262,23 @@ const App = () => {
       case 'purchase': return <PurchaseView productType={purchaseType} onOpenPurchaseGuide={() => setIsPurchaseGuideOpen(true)} onChangeType={setPurchaseType} />;
       case 'orders': 
           return selectedOrder 
-            ? <OrderDetailView order={selectedOrder} onBack={() => setSelectedOrder(null)} onExportOrder={() => handleExportOrder(selectedOrder)} onNavigateToSupport={handleNavigateToSupport} /> 
+            ? <OrderDetailView
+                order={selectedOrder}
+                onBack={() => setSelectedOrder(null)}
+                onExportOrder={() => handleExportOrder(selectedOrder)}
+                onNavigateToSupport={handleNavigateToSupport}
+                onOrderUpdate={(updatedOrder) => {
+                  // 更新 selectedOrder
+                  setSelectedOrder(updatedOrder);
+                  // 更新 ordersList
+                  setOrdersList(prev => prev.map(o => {
+                    if (o.id === updatedOrder.id || o.numericId === updatedOrder.numericId) {
+                      return updatedOrder;
+                    }
+                    return o;
+                  }));
+                }}
+              /> 
             : <OrderListView onSelectOrder={order => setSelectedOrder(order)} onExportAll={handleExportAll} onNavigateToSupport={handleNavigateToSupport} />;
       case 'resources': return <IPResourceManager />;
       case 'router_config': 

@@ -101,6 +101,32 @@ export const clientAPI = {
       amount,
       paymentMethod,
     }),
+
+  // ==================== 优惠券相关 ====================
+
+  /**
+   * 获取当前用户的优惠券列表
+   * @returns {Promise} { total: number, data: Array }
+   */
+  getCoupons: () =>
+    axios.get('/client/coupons'),
+
+  /**
+   * 验证优惠券代码
+   * @param {string} code - 优惠券代码
+   * @param {number} amount - 订单金额
+   * @returns {Promise} { valid: boolean, canUse: boolean, discountAmount: number, ... }
+   */
+  validateCoupon: (code, amount = 0) =>
+    axios.post('/client/coupons/validate', { code, amount }),
+
+  /**
+   * 兑换优惠券代码
+   * @param {string} code - 优惠券代码
+   * @returns {Promise}
+   */
+  redeemCoupon: (code) =>
+    axios.post('/client/coupons/redeem', { code }),
 };
 
 export default clientAPI;

@@ -611,6 +611,97 @@ export const orderService = {
     };
     return colorMap[status] || 'text-gray-600 bg-gray-50';
   },
+
+  /**
+   * 获取订单订阅信息
+   * @param {number} orderId - 订单ID
+   * @returns {Promise} 订阅信息
+   */
+  async getSubscriptionInfo(orderId) {
+    try {
+      const response = await orderAPI.getSubscriptionInfo(orderId);
+
+      if (response.success || response.code === 200 || response.code === 0) {
+        return {
+          success: true,
+          data: response.data || response,
+        };
+      } else {
+        return {
+          success: false,
+          message: response.message || '获取订阅信息失败',
+        };
+      }
+    } catch (error) {
+      console.error('Get subscription info service error:', error);
+      return {
+        success: false,
+        message: error.message || '获取订阅信息失败，请稍后重试',
+      };
+    }
+  },
+
+  /**
+   * 开启自动续费
+   * @param {number} orderId - 订单ID
+   * @param {number} renewDurationDays - 续费周期（天数）
+   * @returns {Promise} 开启结果
+   */
+  async enableAutoRenew(orderId, renewDurationDays = 30) {
+    try {
+      const response = await orderAPI.enableAutoRenew(orderId, renewDurationDays);
+
+      if (response.success || response.code === 200 || response.code === 0) {
+        return {
+          success: true,
+          message: response.message || '自动续费已开启',
+          data: response.data || response,
+        };
+      } else {
+        return {
+          success: false,
+          message: response.message || '开启自动续费失败',
+        };
+      }
+    } catch (error) {
+      console.error('Enable auto renew service error:', error);
+      return {
+        success: false,
+        message: error.message || '开启自动续费失败，请稍后重试',
+      };
+    }
+  },
+
+  /**
+   * 关闭自动续费
+   * @param {number} orderId - 订单ID
+   * @param {string} subscriptionId - 第三方订阅ID（可选）
+   * @returns {Promise} 关闭结果
+   */
+  async disableAutoRenew(orderId, subscriptionId) {
+    try {
+      const response = await orderAPI.disableAutoRenew(orderId, subscriptionId);
+
+      if (response.success || response.code === 200 || response.code === 0) {
+        return {
+          success: true,
+          message: response.message || '自动续费已关闭',
+          data: response.data || response,
+        };
+      } else {
+        return {
+          success: false,
+          message: response.message || '关闭自动续费失败',
+        };
+      }
+    } catch (error) {
+      console.error('Disable auto renew service error:', error);
+      return {
+        success: false,
+        message: error.message || '关闭自动续费失败，请稍后重试',
+      };
+    }
+  },
 };
 
 export default orderService;

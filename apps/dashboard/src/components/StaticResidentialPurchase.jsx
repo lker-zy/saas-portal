@@ -1191,12 +1191,12 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
                   {businessCategories.map(cat => {
                     const isActive = viewCategory.id === cat.id;
                     return (
-                      <button 
+                      <button
                         key={cat.id}
                         onClick={() => setViewCategory(cat)}
                         className={`relative w-full text-center py-4 text-[13px] font-medium transition-all ${
-                          isActive 
-                            ? 'text-[#1A73E8] bg-white font-bold' 
+                          isActive
+                            ? 'text-[#1A73E8] bg-white font-bold'
                             : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100/50'
                         }`}
                       >
@@ -1208,30 +1208,25 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
                     );
                   })}
                 </div>
-                
+
                 {/* Right Content */}
                 <div className="flex-1 p-5 overflow-y-auto">
                   <div className="grid grid-cols-3 gap-3">
                     {viewCategory.scenarios.map(sc => {
-                       const isActive = selectedScenarios.some(s => s.id === sc.id);
+                       const isActive = selectedScenarios.length > 0 && selectedScenarios[0].id === sc.id;
                        return (
-                        <button 
+                        <button
                           key={sc.id}
-                          onClick={() => { 
-                            const isSelected = selectedScenarios.some(s => s.id === sc.id);
-                            let newSelection;
-                            if (isSelected) {
-                              newSelection = selectedScenarios.filter(s => s.id !== sc.id);
-                            } else {
-                              newSelection = [...selectedScenarios, { ...sc, categoryId: viewCategory.id, categoryName: viewCategory.name }];
-                            }
+                          onClick={() => {
+                            // 单选模式：直接替换为当前选中的场景
+                            const newSelection = [{ ...sc, categoryId: viewCategory.id, categoryName: viewCategory.name }];
                             setSelectedScenarios(newSelection);
-                            setUserOverrideMode(false); 
-                            setSelectedSku(null); 
+                            setUserOverrideMode(false);
+                            setSelectedSku(null);
                           }}
                           className={`relative flex items-center justify-between px-3 py-2.5 rounded-xl border transition-all duration-200 ease-in-out group bg-white active:scale-[0.98] ${
-                            isActive 
-                              ? 'border-[#1A73E8] shadow-sm ring-1 ring-[#1A73E8] ring-opacity-50' 
+                            isActive
+                              ? 'border-[#1A73E8] shadow-sm ring-1 ring-[#1A73E8] ring-opacity-50'
                               : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
                           }`}
                         >

@@ -29,11 +29,13 @@ axiosInstance.interceptors.request.use(
       try {
         const user = JSON.parse(userStr);
         if (user.id) {
-          config.headers['X-User-ID'] = user.id;
+          // 确保 X-User-ID 是数字类型，避免类型错误
+          config.headers['X-User-ID'] = String(user.id);
         }
-        // 使用 email 而不是 nickname 作为 X-User-Name，避免中文编码问题
-        if (user.email) {
-          config.headers['X-User-Name'] = user.email;
+        // 使用 user.id (数字) 而不是 email 或 nickname，完全避免中文编码问题
+        // HTTP headers 只能包含 ASCII 字符
+        if (user.id) {
+          config.headers['X-User-Name'] = String(user.id);
         }
       } catch (e) {
         console.error('Failed to parse user from localStorage:', e);

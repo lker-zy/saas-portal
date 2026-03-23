@@ -366,19 +366,21 @@ export const orderService = {
       const accessNode = ipAlloc.access_node;
       if (!accessNode) return;
 
-      // 获取服务器地址（优先使用域名绑定）
-      let ipAddress = ipAlloc.ip_address;
-      if (ipAlloc.has_domain_binding && ipAlloc.domain_binding?.primary_domain) {
-        ipAddress = ipAlloc.domain_binding.primary_domain;
-      }
-
-      // 提取地理位置信息
-      const geoInfo = ipAlloc.geo_info || {};
-
       // 为该 IP 的每个协议创建代理节点
       accessNode.access_inbounds.forEach(inbound => {
         const clientConfig = inbound.client_config || inbound.config || {};
         const auth = inbound.auth || {};
+
+        // 获取服务器地址（优先级：client_config.server > domain_binding > ip_address）
+        let ipAddress = ipAlloc.ip_address;
+        // 第一优先级：从 client_config 中提取 server（可能包含域名绑定）
+        if (clientConfig.server && typeof clientConfig.server === 'string') {
+          ipAddress = clientConfig.server;
+        }
+        // 第二优先级：检查 domain_binding 字段（兼容旧格式）
+        else if (ipAlloc.has_domain_binding && ipAlloc.domain_binding?.primary_domain) {
+          ipAddress = ipAlloc.domain_binding.primary_domain;
+        }
 
         adaptedNodes.push({
           id: `${ipAlloc.allocation_id}_${inbound.protocol}_${inbound.port}`,

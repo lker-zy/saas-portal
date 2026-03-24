@@ -161,6 +161,9 @@ const normalizeProxyData = (selectedProxies) => {
         let password = '';
         let uuid = '';
         let ssMethod = '';
+        let flow = '';
+        let tls = null;
+        let reality = null;
 
         if (protocol === 'http' || protocol === 'socks') {
           username = config.username || inbound.username || '';
@@ -178,8 +181,29 @@ const normalizeProxyData = (selectedProxies) => {
           // uuid 在 config.users[0].uuid 或直接在 config.uuid
           if (config.users && config.users.length > 0 && config.users[0].uuid) {
             uuid = config.users[0].uuid;
+            // 提取 flow（VLESS）
+            if (config.users[0].flow) {
+              flow = config.users[0].flow;
+            }
           } else {
             uuid = config.uuid || inbound.uuid || '';
+          }
+
+          // 提取 flow（直接在 config 中）
+          if (config.flow) {
+            flow = config.flow;
+          }
+
+          // 提取 TLS 配置
+          if (config.tls && typeof config.tls === 'object') {
+            tls = config.tls;
+          } else if (inbound.tls && typeof inbound.tls === 'object') {
+            tls = inbound.tls;
+          }
+
+          // 提取 Reality 配置（后端 ClientConfigGenerator 在根级别生成 reality）
+          if (config.reality && typeof config.reality === 'object') {
+            reality = config.reality;
           }
         }
 
@@ -195,6 +219,9 @@ const normalizeProxyData = (selectedProxies) => {
           uuid: uuid,
           ssMethod: ssMethod,
           method: ssMethod,
+          flow: flow,
+          tls: tls,
+          reality: reality,
           // 地理位置信息
           city: proxy.city || 'Unknown',
           region: proxy.region || 'Unknown',
@@ -285,7 +312,53 @@ const ProxyExportModal = ({ isOpen, onClose, selectedProxies = [] }) => {
 
     // VLESS 协议
     if (protocol === 'vless') {
-      return `vless://${p.uuid}@${ip}:${port}?security=tls#Node-${p.id}`;
+      const params = new URLSearchParams();
+
+      // 提取 flow 参数
+      const flow = p.flow || '';
+      if (flow) {
+        params.append('flow', flow);
+      }
+
+      // 提取 TLS/Reality 配置
+      const tls = p.tls || {};
+      const reality = p.reality || {};
+
+      // 判断安全协议类型
+      if (reality && reality.enabled) {
+        params.append('security', 'reality');
+
+        // Reality 参数
+        if (reality.public_key) {
+          params.append('pbk', reality.public_key);
+        }
+        if (reality.short_id) {
+          // short_id 可能是字符串或数组，取第一个值
+          const sid = Array.isArray(reality.short_id) ? reality.short_id[0] : reality.short_id;
+          params.append('sid', sid);
+        }
+        if (reality.fingerprint) {
+          params.append('fp', reality.fingerprint);
+        }
+
+        // SNI
+        if (tls.server_name) {
+          params.append('sni', tls.server_name);
+        }
+      } else if (tls.enabled) {
+        params.append('security', 'tls');
+        if (tls.server_name) {
+          params.append('sni', tls.server_name);
+        }
+        if (tls.alpn && tls.alpn.length > 0) {
+          params.append('alpn', tls.alpn.join(','));
+        }
+      } else {
+        params.append('security', 'none');
+      }
+
+      const queryString = params.toString();
+      return `vless://${p.uuid}@${ip}:${port}${queryString ? `?${queryString}` : ''}#Node-${p.id}`;
     }
 
     // VMess 协议

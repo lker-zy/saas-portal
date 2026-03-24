@@ -30,3 +30,6 @@ yarn-error.log*
 *.swp
 *.swo
 *~
+
+# Temporary files (test screenshots, debug files, etc.)
+tmp/

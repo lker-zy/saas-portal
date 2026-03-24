@@ -107,7 +107,7 @@ const parseClientConfig = (clientConfig) => {
 
 /**
  * 从 accessNodes 数组中提取所有 inbounds
- * 新格式：clientConfig 直接是 inbound 内容（扁平化结构）
+ * 后端格式：accessNode.access_inbounds[].auth 包含认证信息（TLS、Reality）
  * @param {object} ip - IP对象，包含 accessNodes 数组
  * @returns {Array} inbound 数组，每个 inbound 包含元数据
  */
@@ -119,22 +119,51 @@ const getAllInboundsFromAccessNodes = (ip) => {
   const allInbounds = [];
   ip.accessNodes.forEach(accessNode => {
     try {
-      const clientConfigObj = parseClientConfig(accessNode.clientConfig);
-
-      // 新格式：clientConfig 直接是 inbound 内容（有 tag、port、protocol 字段）
-      if (clientConfigObj.tag && clientConfigObj.port && clientConfigObj.protocol) {
-        allInbounds.push({
-          ...clientConfigObj,
-          _accessNodeId: accessNode.id,
-          _accessNodeTag: accessNode.tag,
-          _accessNodeAddress: `${accessNode.ipAddress}:${accessNode.serverPort}`,
-          _accessNodeIpAddress: accessNode.ipAddress,
-          _accessNodeServerPort: accessNode.serverPort,
-          _source: 'accessNode'
+      // 检查是否有 access_inbounds 数组（后端使用下划线命名）
+      if (accessNode.access_inbounds && Array.isArray(accessNode.access_inbounds)) {
+        accessNode.access_inbounds.forEach((inbound, idx) => {
+          allInbounds.push({
+            ...inbound,
+            _accessNodeId: accessNode.id,
+            _accessNodeTag: accessNode.tag,
+            _accessNodeAddress: `${accessNode.ipAddress || accessNode.server}:${accessNode.serverPort}`,
+            _accessNodeIpAddress: accessNode.ipAddress || accessNode.server,
+            _accessNodeServerPort: accessNode.serverPort,
+            _source: 'access_inbounds'
+          });
         });
+      } else {
+        // 降级：尝试从 clientConfig 解析
+        const clientConfigObj = parseClientConfig(accessNode.clientConfig);
+
+        // 检查是否有 inbounds 数组
+        if (clientConfigObj.inbounds && Array.isArray(clientConfigObj.inbounds)) {
+          clientConfigObj.inbounds.forEach(inbound => {
+            allInbounds.push({
+              ...inbound,
+              _accessNodeId: accessNode.id,
+              _accessNodeTag: accessNode.tag,
+              _accessNodeAddress: `${accessNode.ipAddress || accessNode.server}:${accessNode.serverPort}`,
+              _accessNodeIpAddress: accessNode.ipAddress || accessNode.server,
+              _accessNodeServerPort: accessNode.serverPort,
+              _source: 'clientConfig'
+            });
+          });
+        } else if (clientConfigObj.tag && clientConfigObj.port && clientConfigObj.protocol) {
+          // 单个 inbound 格式
+          allInbounds.push({
+            ...clientConfigObj,
+            _accessNodeId: accessNode.id,
+            _accessNodeTag: accessNode.tag,
+            _accessNodeAddress: `${accessNode.ipAddress || accessNode.server}:${accessNode.serverPort}`,
+            _accessNodeIpAddress: accessNode.ipAddress || accessNode.server,
+            _accessNodeServerPort: accessNode.serverPort,
+            _source: 'directInbound'
+          });
+        }
       }
     } catch (e) {
-      console.error('Failed to parse clientConfig for accessNode:', accessNode.id, e);
+      console.error('[getAllInboundsFromAccessNodes] Failed to parse for accessNode:', accessNode.id, e);
     }
   });
 
@@ -147,14 +176,21 @@ const getAllInboundsFromAccessNodes = (ip) => {
  * @returns {Array} 转换后的代理数据
  */
 const normalizeProxyData = (selectedProxies) => {
-  return selectedProxies.flatMap(proxy => {
-    // 检查是否是真实API格式（有 accessNodes）
-    if (proxy.accessNodes && proxy.accessNodes.length > 0) {
-      const inbounds = getAllInboundsFromAccessNodes(proxy);
+  console.log('[normalizeProxyData] Input selectedProxies:', selectedProxies);
 
-      return inbounds.map(inbound => {
+  return selectedProxies.flatMap(proxy => {
+    console.log('[normalizeProxyData] Processing proxy, keys:', Object.keys(proxy));
+
+    // 检查是否有 client_config 字段（后端返回格式）
+    if (proxy.client_config && proxy.client_config.inbounds) {
+      console.log('[normalizeProxyData] Found client_config with inbounds:', proxy.client_config.inbounds.length);
+
+      return proxy.client_config.inbounds.map((inbound, idx) => {
         const protocol = inbound.protocol || 'unknown';
         const config = inbound.config || {};
+
+        console.log(`[normalizeProxyData] inbound[${idx}] config keys:`, Object.keys(config));
+        console.log(`[normalizeProxyData] inbound[${idx}] config:`, config);
 
         // 提取认证信息
         let username = '';
@@ -166,51 +202,41 @@ const normalizeProxyData = (selectedProxies) => {
         let reality = null;
 
         if (protocol === 'http' || protocol === 'socks') {
-          username = config.username || inbound.username || '';
-          password = config.password || inbound.password || '';
+          username = config.username || '';
+          password = config.password || '';
         } else if (protocol === 'shadowtls' || protocol === 'shadowsocks' || protocol === 'ss') {
-          // shadowtls 和 shadowsocks 使用 password
-          password = config.password || inbound.password || '';
-          // 提取 method（对于 shadowtls，method 可能是 "shadowtls" 或 "shadowtls-v{version}"）
-          if (config.version) {
-            ssMethod = `shadowtls-v${config.version}`;
-          } else {
-            ssMethod = config.method || config.ssMethod || 'shadowtls';
-          }
+          password = config.password || '';
+          ssMethod = config.method || 'aes-256-gcm';
         } else if (protocol === 'vmess' || protocol === 'vless') {
-          // uuid 在 config.users[0].uuid 或直接在 config.uuid
+          // uuid 在 config.users[0].uuid
           if (config.users && config.users.length > 0 && config.users[0].uuid) {
             uuid = config.users[0].uuid;
-            // 提取 flow（VLESS）
             if (config.users[0].flow) {
               flow = config.users[0].flow;
             }
-          } else {
-            uuid = config.uuid || inbound.uuid || '';
-          }
-
-          // 提取 flow（直接在 config 中）
-          if (config.flow) {
-            flow = config.flow;
           }
 
           // 提取 TLS 配置
           if (config.tls && typeof config.tls === 'object') {
             tls = config.tls;
-          } else if (inbound.tls && typeof inbound.tls === 'object') {
-            tls = inbound.tls;
+            console.log(`[normalizeProxyData] inbound[${idx}] Found TLS config, keys:`, Object.keys(tls));
+            // 提取 Reality 配置（从 tls.reality 中）
+            if (tls.reality && typeof tls.reality === 'object') {
+              reality = tls.reality;
+              console.log(`[normalizeProxyData] inbound[${idx}] Found Reality config:`, reality);
+            }
           }
 
-          // 提取 Reality 配置（后端 ClientConfigGenerator 在根级别生成 reality）
-          if (config.reality && typeof config.reality === 'object') {
-            reality = config.reality;
+          // 直接从 config 提取 flow（兼容格式）
+          if (config.flow && !flow) {
+            flow = config.flow;
           }
         }
 
         return {
-          id: inbound._accessNodeId || proxy.id || `${proxy.ip}-${inbound.tag}`,
-          ip: inbound._accessNodeIpAddress || proxy.ip || proxy.ipAddress || '',
-          port: inbound._accessNodeServerPort || proxy.port || inbound.port || 0,
+          id: proxy.id || `${proxy.ip}_${protocol}_${inbound.port}`,
+          ip: proxy.ip || inbound.server || proxy.ipAddress || '',
+          port: proxy.port || inbound.port || 0,
           protocol: protocol,
           protocols: [protocol],
           availableProtocols: [protocol],
@@ -220,6 +246,8 @@ const normalizeProxyData = (selectedProxies) => {
           ssMethod: ssMethod,
           method: ssMethod,
           flow: flow,
+          TLSConfig: tls,
+          RealityConfig: reality,
           tls: tls,
           reality: reality,
           // 地理位置信息
@@ -235,8 +263,8 @@ const normalizeProxyData = (selectedProxies) => {
           timezone: proxy.timezone || '',
           zip: proxy.zip || proxy.postal_code || '',
           // 元数据
-          _tag: inbound.tag || inbound._accessNodeTag,
-          _accessNodeAddress: inbound._accessNodeAddress
+          _tag: inbound.tag,
+          _source: 'client_config'
         };
       });
     }
@@ -320,9 +348,22 @@ const ProxyExportModal = ({ isOpen, onClose, selectedProxies = [] }) => {
         params.append('flow', flow);
       }
 
-      // 提取 TLS/Reality 配置
-      const tls = p.tls || {};
-      const reality = p.reality || {};
+      // 提取 TLS/Reality 配置（从大写字段名优先）
+      const tlsConfig = p.TLSConfig || p.tls || {};
+      const reality = p.RealityConfig || tlsConfig.reality || p.reality || {};
+
+      // 调试日志
+      console.log('[getLink VLESS]', {
+        p_keys: Object.keys(p),
+        TLSConfig: p.TLSConfig ? 'found' : 'missing',
+        RealityConfig: p.RealityConfig ? 'found' : 'missing',
+        tls: p.tls ? 'found' : 'missing',
+        reality: p.reality ? 'found' : 'missing',
+        tlsConfig_enabled: tlsConfig.enabled,
+        reality_enabled: reality?.enabled,
+        reality_pk: reality?.public_key?.substring(0, 10) + '...',
+        flow
+      });
 
       // 判断安全协议类型
       if (reality && reality.enabled) {
@@ -341,24 +382,27 @@ const ProxyExportModal = ({ isOpen, onClose, selectedProxies = [] }) => {
           params.append('fp', reality.fingerprint);
         }
 
-        // SNI
-        if (tls.server_name) {
-          params.append('sni', tls.server_name);
+        // SNI（优先使用 reality.server_name）
+        const sni = reality.server_name || tlsConfig.server_name;
+        if (sni) {
+          params.append('sni', sni);
         }
-      } else if (tls.enabled) {
+      } else if (tlsConfig.enabled) {
         params.append('security', 'tls');
-        if (tls.server_name) {
-          params.append('sni', tls.server_name);
+        if (tlsConfig.server_name) {
+          params.append('sni', tlsConfig.server_name);
         }
-        if (tls.alpn && tls.alpn.length > 0) {
-          params.append('alpn', tls.alpn.join(','));
+        if (tlsConfig.alpn && tlsConfig.alpn.length > 0) {
+          params.append('alpn', tlsConfig.alpn.join(','));
         }
       } else {
         params.append('security', 'none');
       }
 
       const queryString = params.toString();
-      return `vless://${p.uuid}@${ip}:${port}${queryString ? `?${queryString}` : ''}#Node-${p.id}`;
+      const url = `vless://${p.uuid}@${ip}:${port}${queryString ? `?${queryString}` : ''}#Node-${p.id}`;
+      console.log('[getLink VLESS URL]', url);
+      return url;
     }
 
     // VMess 协议

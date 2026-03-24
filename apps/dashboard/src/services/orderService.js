@@ -339,7 +339,11 @@ export const orderService = {
         // 认证信息
         username: node.username || '',
         password: node.password || '',
-        uuid: node.uuid || ''
+        uuid: node.uuid || '',
+        // Reality 配置
+        tls: node.tls || node.TLSConfig || null,
+        reality: node.reality || node.RealityConfig || null,
+        flow: node.flow || node.Flow || ''
       };
     });
 
@@ -407,6 +411,10 @@ export const orderService = {
           uuid: auth.uuid || '',
           ssMethod: auth.method || '',
           method: auth.method || '',
+          // Reality 配置
+          tls: auth.tls || auth.TLSConfig || null,
+          reality: auth.reality || auth.RealityConfig || null,
+          flow: auth.flow || auth.Flow || '',
           // 传输配置
           transport: inbound.transport || {},
           // 转换为 accessNodes 格式

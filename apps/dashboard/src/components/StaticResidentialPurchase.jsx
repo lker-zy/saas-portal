@@ -541,8 +541,8 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
   const [customDurationDays, setCustomDurationDays] = useState(7);
   const [purchaseType, setPurchaseType] = useState('one_time');
   const [selectedCycle, setSelectedCycle] = useState(null);
-  const [autoRenew, setAutoRenew] = useState(true);
-  
+  // 移除未使用的 autoRenew 状态，现在使用 isSubscribed 控制 auto_renew
+
   const [recommendation, setRecommendation] = useState(null);
   const [bandwidthMode, setBandwidthMode] = useState('traffic');
   const [userOverrideMode, setUserOverrideMode] = useState(false);
@@ -839,7 +839,7 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
       purchase_duration: durationDays,
       quantity: quantity,
       payment_method: actualPaymentMethod,
-      auto_renew: autoRenew,
+      auto_renew: isSubscribed,  // 修复: 使用UI复选框控制的值，而不是独立的autoRenew状态
       amount: totalUSDValue,
     };
 

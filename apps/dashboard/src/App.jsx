@@ -2043,11 +2043,18 @@ const OrderListView = ({ onSelectOrder, onExportAll, onNavigateToSupport }) => {
     );
 };
 
-const PURCHASE_TABS = [
-  { 
-    id: 'buy_static_isp', 
-    label: '静态住宅 ISP', 
-    icon: Shield, 
+// ═══════════════════════════════════════════════════════════
+// 配置：产品类型显示控制
+// ═══════════════════════════════════════════════════════════
+// 暂时只显示"静态住宅ISP"，其他产品类型隐藏
+// 恢复显示：将 SHOW_HIDDEN_PRODUCT_TYPES 设为 true
+const SHOW_HIDDEN_PRODUCT_TYPES = false;  // TODO: 改为 true 以显示所有产品
+
+const ALL_PURCHASE_TABS = [
+  {
+    id: 'buy_static_isp',
+    label: '静态住宅 ISP',
+    icon: Shield,
     desc: '独享原生住宅IP',
     gradient: 'from-blue-500 to-indigo-600',
     lightBg: 'bg-blue-50',
@@ -2055,10 +2062,10 @@ const PURCHASE_TABS = [
     lightBorder: 'border-blue-200',
     activeBg: 'bg-gradient-to-r from-blue-500 to-indigo-600',
   },
-  { 
-    id: 'buy_dynamic_isp', 
-    label: '动态住宅 ISP', 
-    icon: Globe, 
+  {
+    id: 'buy_dynamic_isp',
+    label: '动态住宅 ISP',
+    icon: Globe,
     desc: '海量IP轮换池',
     gradient: 'from-emerald-500 to-teal-600',
     lightBg: 'bg-emerald-50',
@@ -2066,10 +2073,10 @@ const PURCHASE_TABS = [
     lightBorder: 'border-emerald-200',
     activeBg: 'bg-gradient-to-r from-emerald-500 to-teal-600',
   },
-  { 
-    id: 'buy_datacenter', 
-    label: '数据中心代理', 
-    icon: Server, 
+  {
+    id: 'buy_datacenter',
+    label: '数据中心代理',
+    icon: Server,
     desc: '高速低延迟节点',
     gradient: 'from-violet-500 to-purple-600',
     lightBg: 'bg-violet-50',
@@ -2077,10 +2084,10 @@ const PURCHASE_TABS = [
     lightBorder: 'border-violet-200',
     activeBg: 'bg-gradient-to-r from-violet-500 to-purple-600',
   },
-  { 
-    id: 'buy_vps', 
-    label: '云服务器 VPS', 
-    icon: Cpu, 
+  {
+    id: 'buy_vps',
+    label: '云服务器 VPS',
+    icon: Cpu,
     desc: '独享云端算力',
     gradient: 'from-amber-500 to-orange-600',
     lightBg: 'bg-amber-50',
@@ -2089,6 +2096,11 @@ const PURCHASE_TABS = [
     activeBg: 'bg-gradient-to-r from-amber-500 to-orange-600',
   },
 ];
+
+// 根据配置过滤显示的产品类型
+const PURCHASE_TABS = SHOW_HIDDEN_PRODUCT_TYPES
+  ? ALL_PURCHASE_TABS
+  : ALL_PURCHASE_TABS.filter(tab => tab.id === 'buy_static_isp');
 
 const PurchaseView = ({ productType = 'buy_static_isp', onOpenPurchaseGuide, onChangeType }) => {
     const [activeProduct, setActiveProduct] = useState(productType);

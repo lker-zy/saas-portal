@@ -590,8 +590,8 @@ const StaticResidentialPurchase = () => {
   const [customDurationDays, setCustomDurationDays] = useState(7);
   const [purchaseType, setPurchaseType] = useState('one_time');
   const [selectedCycle, setSelectedCycle] = useState(SUBSCRIPTION_CYCLES[2]);
-  const [autoRenew, setAutoRenew] = useState(true);
-  
+  // 移除未使用的 autoRenew 状态，使用 isSubscribed 控制 auto_renew
+
   const [recommendation, setRecommendation] = useState(null);
   const [bandwidthMode, setBandwidthMode] = useState('traffic');
   const [userOverrideMode, setUserOverrideMode] = useState(false);

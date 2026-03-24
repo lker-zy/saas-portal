@@ -363,6 +363,27 @@ const ProxyExportModal = ({ isOpen, onClose, selectedProxies = [] }) => {
 
     // VMess 协议
     if (protocol === 'vmess') {
+      // 检查是否启用 Reality
+      const isReality = p.reality && p.reality.enabled;
+
+      if (isReality) {
+        // VMess + Reality 不支持 URL 格式，生成提示信息
+        const realityInfo = [];
+        if (p.reality.public_key) {
+          realityInfo.push(`pbk: ${p.reality.public_key.substring(0, 16)}...`);
+        }
+        if (p.reality.short_id) {
+          const sid = Array.isArray(p.reality.short_id) ? p.reality.short_id[0] : p.reality.short_id;
+          realityInfo.push(`sid: ${sid}`);
+        }
+        if (p.reality.fingerprint) {
+          realityInfo.push(`fp: ${p.reality.fingerprint}`);
+        }
+
+        return `[VMess+Reality] ${ip}:${port}\n请使用 SingBox JSON 或 v2rayN 格式导入\nReality配置: ${realityInfo.join(', ')}`;
+      }
+
+      const flow = p.flow || '';
       const vmessConfig = {
         v: '2',
         ps: `Node-${p.id}`,
@@ -376,6 +397,12 @@ const ProxyExportModal = ({ isOpen, onClose, selectedProxies = [] }) => {
         path: '',
         tls: 'tls'
       };
+
+      // 如果有 flow（VMess+Reality），添加到配置
+      if (flow) {
+        vmessConfig.flow = flow;
+      }
+
       return 'vmess://' + btoa(JSON.stringify(vmessConfig));
     }
 

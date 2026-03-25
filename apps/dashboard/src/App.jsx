@@ -1901,11 +1901,26 @@ const OrderListView = ({ onSelectOrder, onExportAll, onNavigateToSupport }) => {
               // Parse scenarios
               const scenarios = order.scenario ? [order.scenario] : [];
 
-              // Parse supported protocols
+              // Parse supported protocols - use delivery_protocols from backend
               let supportedProtocols = [];
-              if (order.included_protocols) {
-                supportedProtocols = order.included_protocols.split(',').map(p => p.trim().toUpperCase());
+              if (order.delivery_protocols && Array.isArray(order.delivery_protocols) && order.delivery_protocols.length > 0) {
+                // Use delivery_protocols array from backend (already parsed)
+                supportedProtocols = order.delivery_protocols.map(p => p.toUpperCase());
+              } else if (order.included_protocols) {
+                // Fallback: parse from included_protocols string (try JSON first, then comma-separated)
+                try {
+                  const parsed = JSON.parse(order.included_protocols);
+                  if (Array.isArray(parsed)) {
+                    supportedProtocols = parsed.map(p => String(p).toUpperCase());
+                  } else {
+                    throw new Error('Not an array');
+                  }
+                } catch (e) {
+                  // JSON parse failed, try comma-separated format
+                  supportedProtocols = order.included_protocols.split(',').map(p => p.trim().toUpperCase());
+                }
               } else if (order.protocol) {
+                // Fallback: use single protocol value
                 supportedProtocols = [order.protocol.toUpperCase()];
               }
 
@@ -1926,6 +1941,7 @@ const OrderListView = ({ onSelectOrder, onExportAll, onNavigateToSupport }) => {
                 totalIps: order.quantity || order.ip_quantity || 0,
                 scenarios: scenarios,
                 supportedProtocols: supportedProtocols,
+                deliveryProtocols: order.delivery_protocols, // 保存原始的交付协议列表
                 trafficUsed: order.traffic_used || '0',
                 protocol: order.protocol || 'HTTP',
                 // 订阅/自动续费信息
@@ -2538,18 +2554,22 @@ const OrderDetailView = ({ order, onBack, onExportOrder, onNavigateToSupport, on
                             <span className="text-[10px] text-emerald-600 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded">运行中</span>
                         </div>
                         <div className="space-y-4 mb-6">
-                            <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-600 font-medium">HTTP / HTTPS</span>
-                                <div className="w-10 h-5 bg-blue-600 rounded-full relative cursor-pointer">
-                                    <div className="absolute right-1 top-1 w-3 h-3 bg-white rounded-full shadow-sm"></div>
+                            {(currentOrder.supportedProtocols || currentOrder.deliveryProtocols || []).length > 0 ? (
+                                (currentOrder.supportedProtocols || currentOrder.deliveryProtocols || []).map((protocol) => (
+                                    <div key={protocol} className="flex items-center justify-between">
+                                        <span className="text-sm text-gray-600 font-medium">
+                                            {protocol === 'HTTP' || protocol === 'HTTPS' ? 'HTTP / HTTPS' : protocol}
+                                        </span>
+                                        <div className="w-10 h-5 bg-blue-600 rounded-full relative cursor-pointer">
+                                            <div className="absolute right-1 top-1 w-3 h-3 bg-white rounded-full shadow-sm"></div>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="text-center text-gray-400 text-sm py-4">
+                                    暂无协议配置
                                 </div>
-                            </div>
-                            <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-600 font-medium">SOCKS5</span>
-                                <div className="w-10 h-5 bg-blue-600 rounded-full relative cursor-pointer">
-                                    <div className="absolute right-1 top-1 w-3 h-3 bg-white rounded-full shadow-sm"></div>
-                                </div>
-                            </div>
+                            )}
                         </div>
                         <button className="w-full py-2 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 hover:bg-gray-50 transition-colors">
                             重置端口配置

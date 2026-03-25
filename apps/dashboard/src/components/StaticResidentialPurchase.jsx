@@ -535,7 +535,7 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
     tiktok_shop: tiktokImg,
   };
   const [selectedTerminal, setSelectedTerminal] = useState(null);
-  const [protocol, setProtocol] = useState('socks'); // 使用小写，与API返回一致
+  const [protocol, setProtocol] = useState([]); // 支持多选协议，默认无选中
   const [quantity, setQuantity] = useState(1);
   const [selectedDuration, setSelectedDuration] = useState(null);
   const [customDurationDays, setCustomDurationDays] = useState(7);
@@ -681,9 +681,13 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
           // 设置可用协议
           setAvailableProtocols(protocols);
 
-          // 如果当前选中的协议不在新列表中，重置为第一个可用协议
-          if (protocols.length > 0 && !protocols.includes(protocol)) {
-            setProtocol(protocols[0]);
+          // 如果当前选中的协议不在新列表中，清空选择
+          if (protocols.length > 0) {
+            // 过滤掉无效的协议，只保留有效的
+            const validProtocols = protocol.filter(p => protocols.includes(p));
+            if (validProtocols.length !== protocol.length) {
+              setProtocol(validProtocols);
+            }
           }
         }
       } catch (error) {
@@ -705,25 +709,27 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
       const recProto = productService.getRecommendedProtocolForTerminal(selectedTerminal, availableProtocols);
 
       if (selectedTerminal && availableProtocols.length > 0) {
-        // 检查当前协议是否与终端兼容
-        const isCompatible = productService.isProtocolCompatibleWithTerminal(protocol, selectedTerminal);
-
-        if (!isCompatible) {
-          // 自动切换到推荐的兼容协议
+        // 如果没有选中任何协议，自动选择推荐的兼容协议
+        if (protocol.length === 0) {
           if (recProto) {
-            setProtocol(recProto);
-          } else {
-            // 选择第一个兼容的可用协议
-            const compatibleProtocols = productService.getCompatibleProtocolsForTerminal(selectedTerminal, availableProtocols);
-            if (compatibleProtocols.length > 0) {
-              setProtocol(compatibleProtocols[0]);
+            setProtocol([recProto]);
+          }
+        } else {
+          // 检查当前选中的协议是否与终端兼容（至少有一个兼容即可）
+          const isCompatible = protocol.some(p => productService.isProtocolCompatibleWithTerminal(p, selectedTerminal));
+
+          if (!isCompatible) {
+            // 自动切换到推荐的兼容协议（选择第一个兼容的协议）
+            const compatibleProtocol = availableProtocols.find(p => productService.isProtocolCompatibleWithTerminal(p, selectedTerminal));
+            if (compatibleProtocol) {
+              setProtocol([compatibleProtocol]);
             }
           }
         }
       }
 
       setRecommendation({
-        protocol: recProto || productService.getRecommendedProtocol(availableProtocols),
+        protocol: recProto || productService.getRecommendedProtocol(availableProtocols) || (protocol.length > 0 ? protocol[0] : null),
         desc: lastScenario?.recommend?.desc || '请完善业务信息以获取推荐配置',
         modeLabel: lastScenario?.recommend?.bandwidthMode === 'traffic' ? '流量计费' : (lastScenario?.recommend?.bandwidthMode === 'bandwidth' ? '独享带宽' : '待定')
       });
@@ -829,7 +835,7 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
       country: selectedRegion.id,
       scenario: selectedScenarios[0]?.id || 'ecommerce',
       template_id: selectedSku?.id,  // SKU的ID就是模板ID
-      protocol: protocol,  // 交付协议
+      delivery_protocols: protocol,  // 交付协议列表（支持多选）
       ip_level: selectedSku.level || 'standard',
       use_terminal: selectedTerminal?.id || 'mobile',
       ip_feature: selectedSku.type || 'static',
@@ -1306,7 +1312,7 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
               )}
               <div className="flex flex-wrap gap-3">
                 {availableProtocols.length > 0 ? availableProtocols.map(p => {
-                  const isSelected = protocol === p;
+                  const isSelected = protocol.includes(p);
                   // 使用 productService 检查兼容性
                   const isDisabled = productService.shouldDisableProtocol(p, selectedTerminal, availableProtocols);
                   const disableReason = productService.getProtocolDisableReason(p, selectedTerminal, availableProtocols);
@@ -1317,7 +1323,19 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
                   return (
                     <button
                       key={`protocol-${p}`}
-                      onClick={() => !isDisabled && setProtocol(p)}
+                      onClick={() => {
+                        if (!isDisabled) {
+                          // 切换协议选择状态
+                          if (isSelected) {
+                            // 至少保留一个协议
+                            if (protocol.length > 1) {
+                              setProtocol(protocol.filter(proto => proto !== p));
+                            }
+                          } else {
+                            setProtocol([...protocol, p]);
+                          }
+                        }
+                      }}
                       disabled={isDisabled}
                       className={`min-w-[80px] px-4 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200 ${
                         isDisabled
@@ -1329,6 +1347,9 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
                       title={isDisabled ? disableReason : undefined}
                     >
                       {displayProtocol}
+                      {isSelected && (
+                        <span className="ml-1 text-xs">✓</span>
+                      )}
                     </button>
                   );
                 }) : (
@@ -1490,7 +1511,7 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
                 <OrderRow label="代理类型" value="静态住宅 ISP" />
                 <OrderRow label="国家/地区" value={selectedRegion ? `${selectedRegion.flag} ${selectedRegion.name}` : null} muted={!selectedRegion} />
                 <OrderRow label="业务场景" value={selectedScenarios.length > 0 ? selectedScenarios.map(s => s.name).join(', ') : null} muted={selectedScenarios.length === 0} />
-                <OrderRow label="交付协议" value={protocol ? productService.formatProtocolName(protocol) : null} />
+                <OrderRow label="交付协议" value={protocol && protocol.length > 0 ? protocol.map(p => productService.formatProtocolName(p)).join(', ') : '未选择'} muted={protocol.length === 0} />
                 
                 <div className="border-t border-dashed border-gray-100 my-2"></div>
                 

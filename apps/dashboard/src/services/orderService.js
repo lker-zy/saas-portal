@@ -318,70 +318,109 @@ export const orderService = {
       // 获取geo_info，使用默认值
       const geoInfo = ipAlloc.geo_info || {};
 
-      // 为该 IP 的每个协议创建代理节点
-      accessNode.access_inbounds.forEach(inbound => {
-        const clientConfig = inbound.client_config || inbound.config || {};
+      // 获取服务器地址（优先级：client_config.server > domain_binding > ip_address）
+      let ipAddress = ipAlloc.ip_address;
+      const firstClientConfig = accessNode.access_inbounds?.[0]?.client_config;
+      if (firstClientConfig?.server && typeof firstClientConfig.server === 'string') {
+        ipAddress = firstClientConfig.server;
+      }
+
+      // 构建 client_config.inbounds 结构（包含所有协议）
+      const allInbounds = accessNode.access_inbounds.map(inbound => {
+        const clientConfig = inbound.client_config || {};
         const auth = inbound.auth || {};
 
-        // 获取服务器地址（优先级：client_config.server > domain_binding > ip_address）
-        let ipAddress = ipAlloc.ip_address;
-        // 第一优先级：从 client_config 中提取 server（可能包含域名绑定）
-        if (clientConfig.server && typeof clientConfig.server === 'string') {
-          ipAddress = clientConfig.server;
+        // 提取协议配置
+        const config = {};
+
+        // HTTP/SOCKS 协议
+        if (inbound.protocol === 'http' || inbound.protocol === 'socks') {
+          if (auth.username) config.username = auth.username;
+          if (auth.password) config.password = auth.password;
         }
-        // 第二优先级：检查 domain_binding 字段（兼容旧格式）
-        else if (ipAlloc.has_domain_binding && ipAlloc.domain_binding?.primary_domain) {
-          ipAddress = ipAlloc.domain_binding.primary_domain;
+        // VLESS/VMess 协议
+        else if (inbound.protocol === 'vless' || inbound.protocol === 'vmess') {
+          if (auth.uuid) {
+            config.users = [{ uuid: auth.uuid }];
+            if (auth.flow) config.users[0].flow = auth.flow;
+          }
+          // TLS/Reality 配置
+          if (auth.tls && auth.tls.enabled) {
+            config.tls = auth.tls;
+          }
+          if (auth.reality && auth.reality.enabled) {
+            if (config.tls) {
+              config.tls.reality = auth.reality;
+            } else {
+              config.tls = { reality: auth.reality, enabled: true };
+            }
+          }
         }
 
-        adaptedNodes.push({
-          id: `${ipAlloc.allocation_id}_${inbound.protocol}_${inbound.port}`,
-          ip: ipAddress,
-          port: inbound.port,
+        return {
+          tag: inbound.tag || '',
           protocol: inbound.protocol?.toLowerCase() || 'http',
-          protocols: protocols.map(p => p?.toLowerCase() || 'http'),
-          availableProtocols: protocols.map(p => p?.toLowerCase() || 'http'),
-          status: 'active',
-          country: country,
-          country_code: geoInfo.country_code || country,
-          city: geoInfo.city || 'Unknown',
-          region: geoInfo.region || 'Unknown',
-          region_code: geoInfo.region_code || '',
-          continent: geoInfo.continent || '',
-          continent_code: geoInfo.continent_code || '',
-          latitude: geoInfo.latitude || 0,
-          longitude: geoInfo.longitude || 0,
-          timezone: geoInfo.time_zone || geoInfo.timezone || '',
-          zip: geoInfo.zip_code || geoInfo.zip || '',
-          // 认证信息
-          username: auth.username || '',
-          password: auth.password || '',
-          uuid: auth.uuid || '',
-          ssMethod: auth.method || '',
-          method: auth.method || '',
-          // Reality 配置
-          tls: auth.tls || auth.TLSConfig || null,
-          reality: auth.reality || auth.RealityConfig || null,
-          flow: auth.flow || auth.Flow || '',
-          // 传输配置
-          transport: inbound.transport || {},
-          // 转换为 accessNodes 格式
-          accessNodes: [{
-            id: `${accessNode.id}_${inbound.protocol}`,
-            tag: inbound.tag,
-            protocol: inbound.protocol?.toLowerCase() || 'http',
-            port: inbound.port,
-            ipAddress: ipAddress,
-            serverPort: accessNode.server_port,
-            clientConfig: JSON.stringify(clientConfig),
-            nodeUuid: accessNode.node_uuid
-          }],
-          // 元数据
-          _tag: inbound.tag,
-          _accessNodeAddress: `${accessNode.server}:${accessNode.server_port}`,
-          _accessNodeIpAddress: ipAlloc.ip_address,
-          _source: 'accessNode'
-        });
+          port: inbound.port,
+          config: config
+        };
+      });
+
+      // 构建完整的 client_config
+      const fullClientConfig = {
+        generated_at: new Date().toISOString(),
+        inbounds: allInbounds,
+        server: ipAddress,
+        version: '1.0.0'
+      };
+
+      // 为每个 IP 分配创建一个节点（包含所有协议）
+      adaptedNodes.push({
+        id: `${ipAlloc.allocation_id}_multi`,
+        ip: ipAddress,
+        port: allInbounds[0]?.port || 0,
+        protocol: allInbounds[0]?.protocol?.toLowerCase() || 'http',
+        protocols: protocols.map(p => p?.toLowerCase() || 'http'),
+        availableProtocols: protocols.map(p => p?.toLowerCase() || 'http'),
+        status: 'active',
+        country: country,
+        country_code: geoInfo.country_code || country,
+        city: geoInfo.city || 'Unknown',
+        region: geoInfo.region || 'Unknown',
+        region_code: geoInfo.region_code || '',
+        continent: geoInfo.continent || '',
+        continent_code: geoInfo.continent_code || '',
+        latitude: geoInfo.latitude || 0,
+        longitude: geoInfo.longitude || 0,
+        timezone: geoInfo.time_zone || geoInfo.timezone || '',
+        zip: geoInfo.zip_code || geoInfo.zip || '',
+        // 完整的 client_config（包含所有 inbounds）
+        client_config: fullClientConfig,
+        // 从第一个 inbound 提取认证信息（用于兼容）
+        username: allInbounds[0]?.config?.username || '',
+        password: allInbounds[0]?.config?.password || '',
+        uuid: allInbounds[0]?.config?.users?.[0]?.uuid || '',
+        flow: allInbounds[0]?.config?.users?.[0]?.flow || '',
+        tls: allInbounds[0]?.config?.tls || null,
+        reality: allInbounds[0]?.config?.tls?.reality || null,
+        // 转换为 accessNodes 格式
+        accessNodes: allInbounds.map(inbound => ({
+          id: `${accessNode.id}_${inbound.protocol}`,
+          tag: inbound.tag || '',
+          protocol: inbound.protocol?.toLowerCase() || 'http',
+          port: inbound.port,
+          ipAddress: ipAddress,
+          serverPort: accessNode.server_port,
+          clientConfig: JSON.stringify({
+            generated_at: new Date().toISOString(),
+            inbounds: [inbound.tag ? allInbounds.find(i => (i.tag === inbound.tag)) : inbound]
+          }),
+          nodeUuid: accessNode.node_uuid
+        })),
+        // 元数据
+        _tag: accessNode.tag,
+        _accessNodeAddress: `${accessNode.server}:${accessNode.server_port}`,
+        _accessNodeIpAddress: ipAlloc.ip_address,
+        _source: 'accessNode'
       });
     });
 

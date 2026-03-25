@@ -189,6 +189,15 @@ const normalizeProxyData = (selectedProxies) => {
         const protocol = inbound.protocol || 'unknown';
         const config = inbound.config || {};
 
+        // 跳过没有完整配置的 inbound（如链式跳点）
+        // 对于 VLESS/VMess/Trojan，需要 TLS/Reality 配置
+        const protocolLower = protocol.toLowerCase();
+        if ((protocolLower === 'vless' || protocolLower === 'vmess' || protocolLower === 'trojan') &&
+            (!config.tls || !config.tls.reality || !config.tls.reality.enabled)) {
+          console.log(`[normalizeProxyData] Skipping ${protocol} inbound without Reality config: tag=${inbound.tag}`);
+          return null; // 返回 null，稍后过滤
+        }
+
         console.log(`[normalizeProxyData] inbound[${idx}] config keys:`, Object.keys(config));
         console.log(`[normalizeProxyData] inbound[${idx}] config:`, config);
 
@@ -266,7 +275,7 @@ const normalizeProxyData = (selectedProxies) => {
           _tag: inbound.tag,
           _source: 'client_config'
         };
-      });
+      }).filter(item => item !== null); // 过滤掉 null 值（被跳过的链式跳点 inbound）
     }
 
     // 简化格式（Mock数据），直接返回

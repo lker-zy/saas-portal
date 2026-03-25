@@ -239,45 +239,32 @@ export const orderService = {
     const country = data.country || data.country_code || 'US';
     const protocols = data.protocols || [];
 
-    // 将代理节点转换为 ProxyExportModal 需要的格式
-    const adaptedNodes = proxyNodes.map(node => {
+    // 为每个 inbound 创建一个单独的节点
+    const adaptedNodes = [];
+
+    proxyNodes.forEach(node => {
       const clientConfig = node.client_config || node.clientConfig || {};
       const inbounds = clientConfig.inbounds || [];
 
-      // 将 inbounds 转换为 accessNodes 格式
-      const accessNodes = inbounds.map((inbound, idx) => {
+      inbounds.forEach(inbound => {
         const config = inbound.config || {};
         const users = config.users || [];
         const tls = config.tls || {};
         const reality = tls.reality || {};
         const firstUser = users[0] || {};
+        const protocol = inbound.protocol || node.protocol || 'http';
 
-        return {
-          id: `${node.proxy_node_id || node.node_uuid || node.id}_inbound_${idx}`,
-          tag: inbound.tag,
-          protocol: inbound.protocol || node.protocol || 'HTTP',
-          port: inbound.port || node.server_port,
-          ipAddress: clientConfig.server || node.server,
-          serverPort: inbound.port || node.server_port,
-          clientConfig: JSON.stringify(inbound),
-          nodeUuid: node.node_uuid || node.proxy_node_id?.toString()
+        // 创建只包含当前 inbound 的 client_config
+        const singleInboundClientConfig = {
+          ...clientConfig,
+          inbounds: [inbound]
         };
-      });
 
-      // 如果有 inbounds，返回第一个 inbound 的信息作为主节点
-      if (inbounds.length > 0) {
-        const firstInbound = inbounds[0];
-        const firstConfig = firstInbound.config || {};
-        const firstUsers = firstConfig.users || [];
-        const firstTls = firstConfig.tls || {};
-        const firstReality = firstTls.reality || {};
-        const firstUser = firstUsers[0] || {};
-
-        return {
-          id: node.node_uuid || node.proxy_node_id?.toString() || `${node.server}_${node.server_port}`,
-          ip: node.server,
-          port: firstInbound.port || node.server_port,
-          city: 'Unknown', // Cluster API 暂不返回地理信息
+        adaptedNodes.push({
+          id: `${node.node_uuid || node.proxy_node_id || node.id}_${inbound.tag}`,
+          ip: clientConfig.server || node.server,
+          port: inbound.port || node.server_port,
+          city: 'Unknown',
           region: 'Unknown',
           region_code: '',
           country: country,
@@ -288,39 +275,21 @@ export const orderService = {
           longitude: 0,
           timezone: '',
           zip: '',
-          accessNodes: accessNodes,
-          protocols: protocols,
-          availableProtocols: protocols,
-          // 认证信息（从第一个 inbound 提取）
+          // ProxyExportModal 期望的格式：client_config.inbounds
+          client_config: singleInboundClientConfig,
+          // 协议信息：当前 inbound 的协议
+          protocols: [protocol.toLowerCase()],
+          availableProtocols: [protocol.toLowerCase()],
+          // 认证信息
           username: firstUser.username || '',
           password: firstUser.password || '',
           uuid: firstUser.uuid || '',
           flow: firstUser.flow || '',
           // Reality 配置
-          tls: firstTls.enabled ? firstTls : null,
-          reality: firstReality.enabled ? firstReality : null
-        };
-      }
-
-      // 降级：如果没有 inbounds，使用节点级别信息
-      return {
-        id: node.node_uuid || node.proxy_node_id?.toString() || `${node.server}_${node.server_port}`,
-        ip: node.server,
-        port: node.server_port || 0,
-        city: 'Unknown',
-        region: 'Unknown',
-        region_code: '',
-        country: country,
-        country_code: country,
-        continent: '',
-        continent_code: '',
-        latitude: 0,
-        longitude: 0,
-        timezone: '',
-        zip: '',
-        protocols: protocols.length > 0 ? protocols : [node.protocol?.toLowerCase() || 'http'],
-        availableProtocols: protocols.length > 0 ? protocols : [node.protocol?.toLowerCase() || 'http']
-      };
+          tls: tls.enabled ? tls : null,
+          reality: reality.enabled ? reality : null
+        });
+      });
     });
 
     return {

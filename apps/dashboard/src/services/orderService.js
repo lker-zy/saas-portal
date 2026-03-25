@@ -234,123 +234,99 @@ export const orderService = {
       return this.adaptV2Format(data);
     }
 
-    // 处理旧的 proxy_nodes 格式（向后兼容）
+    // 处理新的 Cluster API 格式（proxy_nodes 包含 client_config.inbounds）
     const proxyNodes = data.proxy_nodes || data.proxyNodes || data.list || [];
     const country = data.country || data.country_code || 'US';
+    const protocols = data.protocols || [];
 
     // 将代理节点转换为 ProxyExportModal 需要的格式
     const adaptedNodes = proxyNodes.map(node => {
-      // 提取地理位置信息
-      const geoInfo = node.geo_info || node.geoInfo || {};
+      const clientConfig = node.client_config || node.clientConfig || {};
+      const inbounds = clientConfig.inbounds || [];
 
-      // 处理 accessNodes 格式
-      if (node.accessNodes && node.accessNodes.length > 0) {
-        // 已经是 accessNodes 格式，直接使用
+      // 将 inbounds 转换为 accessNodes 格式
+      const accessNodes = inbounds.map((inbound, idx) => {
+        const config = inbound.config || {};
+        const users = config.users || [];
+        const tls = config.tls || {};
+        const reality = tls.reality || {};
+        const firstUser = users[0] || {};
+
         return {
-          id: node.id || node.node_uuid || `${node.ip}_${node.port}`,
-          ip: node.ip || node.ipAddress,
-          port: node.port || node.server_port,
-          city: geoInfo.city || node.city || 'Unknown',
-          region: geoInfo.region || node.region || 'Unknown',
-          region_code: geoInfo.region_code || node.region_code || geoInfo.regionCode || '',
-          country: geoInfo.country || node.country || country,
-          country_code: geoInfo.country_code || node.country_code || geoInfo.countryCode || country,
-          continent: geoInfo.continent || node.continent || '',
-          continent_code: geoInfo.continent_code || node.continent_code || geoInfo.continentCode || '',
-          latitude: geoInfo.latitude || node.latitude || 0,
-          longitude: geoInfo.longitude || node.longitude || 0,
-          timezone: geoInfo.timezone || node.timezone || '',
-          zip: geoInfo.zip || node.zip || node.postal_code || '',
-          // 保留 accessNodes
-          accessNodes: node.accessNodes.map(an => ({
-            id: an.id,
-            tag: an.tag,
-            protocol: an.protocol,
-            port: an.port || an.server_port,
-            ipAddress: an.ip_address || an.ipAddress,
-            serverPort: an.port || an.server_port,
-            clientConfig: an.client_config || an.clientConfig || null,
-            nodeUuid: an.node_uuid || an.nodeUuid
-          }))
+          id: `${node.proxy_node_id || node.node_uuid || node.id}_inbound_${idx}`,
+          tag: inbound.tag,
+          protocol: inbound.protocol || node.protocol || 'HTTP',
+          port: inbound.port || node.server_port,
+          ipAddress: clientConfig.server || node.server,
+          serverPort: inbound.port || node.server_port,
+          clientConfig: JSON.stringify(inbound),
+          nodeUuid: node.node_uuid || node.proxy_node_id?.toString()
+        };
+      });
+
+      // 如果有 inbounds，返回第一个 inbound 的信息作为主节点
+      if (inbounds.length > 0) {
+        const firstInbound = inbounds[0];
+        const firstConfig = firstInbound.config || {};
+        const firstUsers = firstConfig.users || [];
+        const firstTls = firstConfig.tls || {};
+        const firstReality = firstTls.reality || {};
+        const firstUser = firstUsers[0] || {};
+
+        return {
+          id: node.node_uuid || node.proxy_node_id?.toString() || `${node.server}_${node.server_port}`,
+          ip: node.server,
+          port: firstInbound.port || node.server_port,
+          city: 'Unknown', // Cluster API 暂不返回地理信息
+          region: 'Unknown',
+          region_code: '',
+          country: country,
+          country_code: country,
+          continent: '',
+          continent_code: '',
+          latitude: 0,
+          longitude: 0,
+          timezone: '',
+          zip: '',
+          accessNodes: accessNodes,
+          protocols: protocols,
+          availableProtocols: protocols,
+          // 认证信息（从第一个 inbound 提取）
+          username: firstUser.username || '',
+          password: firstUser.password || '',
+          uuid: firstUser.uuid || '',
+          flow: firstUser.flow || '',
+          // Reality 配置
+          tls: firstTls.enabled ? firstTls : null,
+          reality: firstReality.enabled ? firstReality : null
         };
       }
 
-      // 处理单个节点格式（新格式：client_config 直接是 inbound 内容）
-      const clientConfig = node.client_config || node.clientConfig || node.config;
-      const protocols = node.protocols || node.availableProtocols || ['HTTP'];
-
-      // 解析 clientConfig
-      let configObj = {};
-      try {
-        configObj = typeof clientConfig === 'string' ? JSON.parse(clientConfig) : (clientConfig || {});
-      } catch (e) {
-        console.warn('Failed to parse clientConfig:', e);
-      }
-
-      // 新格式：client_config 直接是 inbound 内容（扁平化结构）
-      if (configObj.tag && configObj.port && configObj.protocol) {
-        return {
-          id: node.id || node.node_uuid || `${node.ip}_${node.port}`,
-          ip: node.ip || node.ipAddress,
-          port: node.port || node.server_port,
-          city: geoInfo.city || node.city || 'Unknown',
-          region: geoInfo.region || node.region || 'Unknown',
-          region_code: geoInfo.region_code || node.region_code || geoInfo.regionCode || '',
-          country: geoInfo.country || node.country || country,
-          country_code: geoInfo.country_code || node.country_code || geoInfo.countryCode || country,
-          continent: geoInfo.continent || node.continent || '',
-          continent_code: geoInfo.continent_code || node.continent_code || geoInfo.continentCode || '',
-          latitude: geoInfo.latitude || node.latitude || 0,
-          longitude: geoInfo.longitude || node.longitude || 0,
-          timezone: geoInfo.timezone || node.timezone || '',
-          zip: geoInfo.zip || node.zip || node.postal_code || '',
-          // 转换为 accessNodes 格式
-          accessNodes: [{
-            id: `${node.id}_inbound_0`,
-            tag: configObj.tag,
-            protocol: configObj.protocol || protocols[0] || 'HTTP',
-            port: configObj.port || node.port || node.server_port,
-            ipAddress: configObj.server || node.ip || node.ipAddress,
-            serverPort: configObj.port || node.port || node.server_port,
-            clientConfig: JSON.stringify(configObj),
-            nodeUuid: node.node_uuid || node.nodeUuid || node.id
-          }]
-        };
-      }
-
-      // 简化格式：直接返回
+      // 降级：如果没有 inbounds，使用节点级别信息
       return {
-        id: node.id || node.node_uuid || `${node.ip}_${node.port}`,
-        ip: node.ip || node.ipAddress,
-        port: node.port || node.server_port || 0,
-        city: geoInfo.city || node.city || 'Unknown',
-        region: geoInfo.region || node.region || 'Unknown',
-        region_code: geoInfo.region_code || node.region_code || geoInfo.regionCode || '',
-        country: geoInfo.country || node.country || country,
-        country_code: geoInfo.country_code || node.country_code || geoInfo.countryCode || country,
-        continent: geoInfo.continent || node.continent || '',
-        continent_code: geoInfo.continent_code || node.continent_code || geoInfo.continentCode || '',
-        latitude: geoInfo.latitude || node.latitude || 0,
-        longitude: geoInfo.longitude || node.longitude || 0,
-        timezone: geoInfo.timezone || node.timezone || '',
-        zip: geoInfo.zip || node.zip || node.postal_code || '',
-        protocols: protocols,
-        availableProtocols: protocols,
-        // 认证信息
-        username: node.username || '',
-        password: node.password || '',
-        uuid: node.uuid || '',
-        // Reality 配置
-        tls: node.tls || node.TLSConfig || null,
-        reality: node.reality || node.RealityConfig || null,
-        flow: node.flow || node.Flow || ''
+        id: node.node_uuid || node.proxy_node_id?.toString() || `${node.server}_${node.server_port}`,
+        ip: node.server,
+        port: node.server_port || 0,
+        city: 'Unknown',
+        region: 'Unknown',
+        region_code: '',
+        country: country,
+        country_code: country,
+        continent: '',
+        continent_code: '',
+        latitude: 0,
+        longitude: 0,
+        timezone: '',
+        zip: '',
+        protocols: protocols.length > 0 ? protocols : [node.protocol?.toLowerCase() || 'http'],
+        availableProtocols: protocols.length > 0 ? protocols : [node.protocol?.toLowerCase() || 'http']
       };
     });
 
     return {
       proxy_nodes: adaptedNodes,
       total_ips: adaptedNodes.length,
-      protocols: data.protocols || protocols,
+      protocols: protocols,
       country: country
     };
   },

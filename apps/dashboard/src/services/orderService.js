@@ -315,6 +315,9 @@ export const orderService = {
       const accessNode = ipAlloc.access_node;
       if (!accessNode) return;
 
+      // 获取geo_info，使用默认值
+      const geoInfo = ipAlloc.geo_info || {};
+
       // 为该 IP 的每个协议创建代理节点
       accessNode.access_inbounds.forEach(inbound => {
         const clientConfig = inbound.client_config || inbound.config || {};
@@ -348,8 +351,8 @@ export const orderService = {
           continent_code: geoInfo.continent_code || '',
           latitude: geoInfo.latitude || 0,
           longitude: geoInfo.longitude || 0,
-          timezone: geoInfo.time_zone || '',
-          zip: geoInfo.zip_code || '',
+          timezone: geoInfo.time_zone || geoInfo.timezone || '',
+          zip: geoInfo.zip_code || geoInfo.zip || '',
           // 认证信息
           username: auth.username || '',
           password: auth.password || '',

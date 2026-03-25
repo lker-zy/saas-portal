@@ -178,7 +178,7 @@ const getAllInboundsFromAccessNodes = (ip) => {
 const normalizeProxyData = (selectedProxies) => {
   console.log('[normalizeProxyData] Input selectedProxies:', selectedProxies);
 
-  return selectedProxies.flatMap(proxy => {
+  const allProxies = selectedProxies.flatMap(proxy => {
     console.log('[normalizeProxyData] Processing proxy, keys:', Object.keys(proxy));
 
     // 检查是否有 client_config 字段（后端返回格式）
@@ -277,6 +277,23 @@ const normalizeProxyData = (selectedProxies) => {
       availableProtocols: proxy.availableProtocols || proxy.protocols || ['HTTP']
     }];
   });
+
+  // 去重：使用 id 作为唯一标识，移除重复项
+  const uniqueProxies = [];
+  const seenIds = new Set();
+
+  for (const proxy of allProxies) {
+    const uniqueKey = `${proxy.id}-${proxy.protocol || proxy.protocols?.[0] || 'unknown'}`;
+    if (!seenIds.has(uniqueKey)) {
+      seenIds.add(uniqueKey);
+      uniqueProxies.push(proxy);
+    } else {
+      console.log('[normalizeProxyData] Duplicate proxy removed:', uniqueKey, proxy);
+    }
+  }
+
+  console.log('[normalizeProxyData] Total proxies:', allProxies.length, 'Unique proxies:', uniqueProxies.length);
+  return uniqueProxies;
 };
 
 /**
@@ -295,7 +312,11 @@ const ProxyExportModal = ({ isOpen, onClose, selectedProxies = [] }) => {
   const [showCopied, setShowCopied] = useState(false);
 
   // 规范化代理数据
-  const normalizedProxies = useMemo(() => normalizeProxyData(selectedProxies), [selectedProxies]);
+  const normalizedProxies = useMemo(() => {
+    const result = normalizeProxyData(selectedProxies);
+    console.log('[ProxyExportModal] normalizedProxies count:', result.length, 'data:', result);
+    return result;
+  }, [selectedProxies]);
 
   // 初始化协议标签
   useEffect(() => {
@@ -304,6 +325,13 @@ const ProxyExportModal = ({ isOpen, onClose, selectedProxies = [] }) => {
       setActiveProtoTab(firstAvailable);
     }
   }, [isOpen, normalizedProxies, activeProtoTab]);
+
+  // 重置协议标签当 modal 关闭时
+  useEffect(() => {
+    if (!isOpen) {
+      setActiveProtoTab('');
+    }
+  }, [isOpen]);
 
   // 重置二维码索引
   useEffect(() => {
@@ -578,6 +606,9 @@ const ProxyExportModal = ({ isOpen, onClose, selectedProxies = [] }) => {
     );
     return protocols.includes(currentTab.toLowerCase());
   });
+
+  // Debug: Log filtered proxies
+  console.log('[ProxyExportModal] Current tab:', currentTab, 'validProxies count:', validProxies.length, 'IDs:', validProxies.map(p => p.id));
 
   const rawTextContent = validProxies.map(p => getLink(p)).join('\n');
   const configFileContent = generateConfigFile();
@@ -868,8 +899,8 @@ const ProxyExportModal = ({ isOpen, onClose, selectedProxies = [] }) => {
                       </tr>
                     </thead>
                     <tbody className="divide-y">
-                      {validProxies.map(p => (
-                        <tr key={p.id}>
+                      {validProxies.map((p, idx) => (
+                        <tr key={`${p.id}-${p.protocol || currentTab}-${idx}`}>
                           <td className="px-4 py-3 font-mono">{p.ip}:{p.port}</td>
                           <td className="px-4 py-3 text-gray-600">
                             <div className="font-medium text-gray-900">{p.city}, {p.region}</div>
@@ -919,7 +950,7 @@ const ProxyExportModal = ({ isOpen, onClose, selectedProxies = [] }) => {
                   <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-10">
                     {validProxies.map((p, idx) => (
                       <div
-                        key={p.id}
+                        key={`${p.id}-${p.protocol || currentTab}-${idx}`}
                         className="bg-white p-4 rounded-xl border border-gray-200 flex flex-col items-center gap-2 shadow-sm hover:shadow-md transition-all cursor-pointer group hover:border-blue-200"
                         onClick={() => setLockedQrIndex(idx)}
                       >

@@ -4386,10 +4386,13 @@ const App = () => {
           setIsPurchaseGuideOpen(false);
         }}
       />
-      <ProxyExportModal 
-        isOpen={isProxyExportModalOpen} 
-        onClose={() => setIsProxyExportModalOpen(false)} 
-        selectedProxies={exportProxies} 
+      <ProxyExportModal
+        isOpen={isProxyExportModalOpen}
+        onClose={() => {
+          setIsProxyExportModalOpen(false);
+          setExportProxies([]); // Clear state to prevent accumulation
+        }}
+        selectedProxies={exportProxies}
       />
 
       <aside className={`w-64 flex-col hidden md:flex sticky top-0 h-screen overflow-y-auto z-40 transition-all duration-300 ${isDashboard ? 'bg-slate-900/80 backdrop-blur-xl border-r border-slate-800' : 'bg-white border-r border-gray-200'}`}>

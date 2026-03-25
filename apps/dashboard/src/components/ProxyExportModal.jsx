@@ -190,11 +190,11 @@ const normalizeProxyData = (selectedProxies) => {
         const config = inbound.config || {};
 
         // 跳过没有完整配置的 inbound（如链式跳点）
-        // 对于 VLESS/VMess/Trojan，需要 TLS/Reality 配置
+        // 对于 VLESS/VMess/Trojan，需要 TLS 配置（Reality 是可选的）
         const protocolLower = protocol.toLowerCase();
         if ((protocolLower === 'vless' || protocolLower === 'vmess' || protocolLower === 'trojan') &&
-            (!config.tls || !config.tls.reality || !config.tls.reality.enabled)) {
-          console.log(`[normalizeProxyData] Skipping ${protocol} inbound without Reality config: tag=${inbound.tag}`);
+            (!config.tls || !config.tls.enabled)) {
+          console.log(`[normalizeProxyData] Skipping ${protocol} inbound without TLS config: tag=${inbound.tag}`);
           return null; // 返回 null，稍后过滤
         }
 

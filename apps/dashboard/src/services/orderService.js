@@ -330,29 +330,44 @@ export const orderService = {
         const clientConfig = inbound.client_config || {};
         const auth = inbound.auth || {};
 
-        // 提取协议配置
-        const config = {};
-
-        // HTTP/SOCKS 协议
-        if (inbound.protocol === 'http' || inbound.protocol === 'socks') {
-          if (auth.username) config.username = auth.username;
-          if (auth.password) config.password = auth.password;
+        // 提取协议配置：从 client_config.inbounds[0].config 中获取
+        let config = {};
+        if (clientConfig.inbounds && clientConfig.inbounds.length > 0) {
+          const firstInboundConfig = clientConfig.inbounds[0].config || {};
+          config = { ...firstInboundConfig };
         }
-        // VLESS/VMess 协议
-        else if (inbound.protocol === 'vless' || inbound.protocol === 'vmess') {
-          if (auth.uuid) {
-            config.users = [{ uuid: auth.uuid }];
-            if (auth.flow) config.users[0].flow = auth.flow;
+
+        // 如果上面的提取失败，尝试从 auth 中构建（兼容旧格式）
+        if (Object.keys(config).length === 0) {
+          // HTTP/SOCKS 协议
+          if (inbound.protocol === 'http' || inbound.protocol === 'socks') {
+            if (auth.username) config.username = auth.username;
+            if (auth.password) config.password = auth.password;
           }
-          // TLS/Reality 配置
-          if (auth.tls && auth.tls.enabled) {
-            config.tls = auth.tls;
+          // ShadowTLS 协议
+          else if (inbound.protocol === 'shadowtls') {
+            if (auth.password) config.password = auth.password;
+            // TLS 配置
+            if (auth.tls && auth.tls.enabled) {
+              config.tls = auth.tls;
+            }
           }
-          if (auth.reality && auth.reality.enabled) {
-            if (config.tls) {
-              config.tls.reality = auth.reality;
-            } else {
-              config.tls = { reality: auth.reality, enabled: true };
+          // VLESS/VMess 协议
+          else if (inbound.protocol === 'vless' || inbound.protocol === 'vmess') {
+            if (auth.uuid) {
+              config.users = [{ uuid: auth.uuid }];
+              if (auth.flow) config.users[0].flow = auth.flow;
+            }
+            // TLS/Reality 配置
+            if (auth.tls && auth.tls.enabled) {
+              config.tls = auth.tls;
+            }
+            if (auth.reality && auth.reality.enabled) {
+              if (config.tls) {
+                config.tls.reality = auth.reality;
+              } else {
+                config.tls = { reality: auth.reality, enabled: true };
+              }
             }
           }
         }
@@ -361,6 +376,7 @@ export const orderService = {
           tag: inbound.tag || '',
           protocol: inbound.protocol?.toLowerCase() || 'http',
           port: inbound.port,
+          server: clientConfig.server,  // 每个inbound有自己的server地址
           config: config
         };
       });
@@ -376,8 +392,9 @@ export const orderService = {
       // 为每个 IP 分配创建一个节点（包含所有协议）
       adaptedNodes.push({
         id: `${ipAlloc.allocation_id}_multi`,
-        ip: ipAddress,
-        port: allInbounds[0]?.port || 0,
+        // 不设置统一的ip和port，让ProxyExportModal从每个inbound获取
+        // ip: ipAddress,
+        // port: allInbounds[0]?.port || 0,
         protocol: allInbounds[0]?.protocol?.toLowerCase() || 'http',
         protocols: protocols.map(p => p?.toLowerCase() || 'http'),
         availableProtocols: protocols.map(p => p?.toLowerCase() || 'http'),
@@ -417,6 +434,11 @@ export const orderService = {
             port: inbound.port,
             auth: inbound.protocol === 'http' || inbound.protocol === 'socks'
               ? { username: inbound.config?.username, password: inbound.config?.password }
+              : inbound.protocol === 'shadowtls'
+              ? {
+                  password: inbound.config?.password,
+                  tls: inbound.config?.tls
+                }
               : inbound.protocol === 'vless' || inbound.protocol === 'vmess'
               ? {
                   uuid: inbound.config?.users?.[0]?.uuid,

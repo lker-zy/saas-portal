@@ -402,7 +402,7 @@ export const orderService = {
         flow: allInbounds[0]?.config?.users?.[0]?.flow || '',
         tls: allInbounds[0]?.config?.tls || null,
         reality: allInbounds[0]?.config?.tls?.reality || null,
-        // 转换为 accessNodes 格式
+        // 转换为 accessNodes 格式（前端ProxyExportModal期望 access_inbounds 字段）
         accessNodes: allInbounds.map(inbound => ({
           id: `${accessNode.id}_${inbound.protocol}`,
           tag: inbound.tag || '',
@@ -410,10 +410,28 @@ export const orderService = {
           port: inbound.port,
           ipAddress: ipAddress,
           serverPort: accessNode.server_port,
-          clientConfig: JSON.stringify({
-            generated_at: new Date().toISOString(),
-            inbounds: [inbound.tag ? allInbounds.find(i => (i.tag === inbound.tag)) : inbound]
-          }),
+          // 保留原始的 access_inbounds 数据（用于ProxyExportModal）
+          access_inbounds: [{
+            tag: inbound.tag || '',
+            protocol: inbound.protocol?.toLowerCase() || 'http',
+            port: inbound.port,
+            auth: inbound.protocol === 'http' || inbound.protocol === 'socks'
+              ? { username: inbound.config?.username, password: inbound.config?.password }
+              : inbound.protocol === 'vless' || inbound.protocol === 'vmess'
+              ? {
+                  uuid: inbound.config?.users?.[0]?.uuid,
+                  flow: inbound.config?.users?.[0]?.flow,
+                  tls: inbound.config?.tls,
+                  reality: inbound.config?.tls?.reality
+                }
+              : {},
+            client_config: {
+              generated_at: new Date().toISOString(),
+              inbounds: [inbound],
+              server: ipAddress,
+              version: '1.0.0'
+            }
+          }],
           nodeUuid: accessNode.node_uuid
         })),
         // 元数据

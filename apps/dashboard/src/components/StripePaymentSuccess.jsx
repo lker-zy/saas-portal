@@ -18,6 +18,10 @@ export const StripePaymentSuccess = () => {
   useEffect(() => {
     console.log('[PaymentSuccess] Component mounted');
 
+    // 清除表单状态（支付成功后不需要保留）
+    sessionStorage.removeItem('purchase_form_state');
+    console.log('[PaymentSuccess] Form state cleared');
+
     // 获取 session_id（用于后续查询订单详情）
     const urlParams = new URLSearchParams(window.location.search);
     const sessionId = urlParams.get('session_id');

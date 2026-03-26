@@ -649,6 +649,9 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
           setSelectedDuration(durations[0]);
         }
 
+        // 恢复表单状态（从 sessionStorage）
+        restoreFormState(regions, scenarios, durations);
+
       } catch (error) {
         console.error('Error loading product data:', error);
         setDataError(error.message);
@@ -659,6 +662,131 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
 
     loadProductData();
   }, []);
+
+  // 保存表单状态到 sessionStorage
+  const saveFormState = () => {
+    const formState = {
+      selectedRegion: selectedRegion?.code,
+      selectedScenarios: selectedScenarios.map(s => s.id),
+      selectedTerminal: selectedTerminal?.id,
+      protocol: protocol,
+      quantity: quantity,
+      selectedDuration: selectedDuration?.id,
+      customDurationDays: customDurationDays,
+      purchaseType: purchaseType,
+      selectedCycle: selectedCycle?.id,
+      bandwidthMode: bandwidthMode,
+      selectedSku: selectedSku?.id,
+      paymentMethod: paymentMethod,
+      timestamp: Date.now()
+    };
+    sessionStorage.setItem('purchase_form_state', JSON.stringify(formState));
+    console.log('[Purchase] Form state saved:', formState);
+  };
+
+  // 从 sessionStorage 恢复表单状态
+  const restoreFormState = (regions, scenarios, durations) => {
+    const savedState = sessionStorage.getItem('purchase_form_state');
+    if (!savedState) {
+      console.log('[Purchase] No saved form state found');
+      return;
+    }
+
+    try {
+      const formState = JSON.parse(savedState);
+      console.log('[Purchase] Restoring form state:', formState);
+
+      // 检查是否过期（30分钟）
+      const EXPIRY_TIME = 30 * 60 * 1000;
+      if (Date.now() - formState.timestamp > EXPIRY_TIME) {
+        console.log('[Purchase] Saved form state expired, clearing...');
+        sessionStorage.removeItem('purchase_form_state');
+        return;
+      }
+
+      // 恢复地区
+      if (formState.selectedRegion) {
+        const region = regions.find(r => r.code === formState.selectedRegion);
+        if (region) setSelectedRegion(region);
+      }
+
+      // 恢复场景
+      if (formState.selectedScenarios && formState.selectedScenarios.length > 0) {
+        const scenarioList = scenarios.filter(s => formState.selectedScenarios.includes(s.id));
+        if (scenarioList.length > 0) setSelectedScenarios(scenarioList);
+      }
+
+      // 恢复终端
+      if (formState.selectedTerminal) {
+        const terminals = [
+          { id: 'fingerprint', name: '指纹浏览器' },
+          { id: 'mobile', name: '移动设备' },
+          { id: 'server', name: '服务器' },
+          { id: 'router', name: '路由器' },
+          { id: 'api', name: 'API接入' }
+        ];
+        const terminal = terminals.find(t => t.id === formState.selectedTerminal);
+        if (terminal) setSelectedTerminal(terminal);
+      }
+
+      // 恢复协议
+      if (formState.protocol && formState.protocol.length > 0) {
+        setProtocol(formState.protocol);
+      }
+
+      // 恢复数量
+      if (formState.quantity) {
+        setQuantity(formState.quantity);
+      }
+
+      // 恢复时长
+      if (formState.selectedDuration) {
+        const duration = durations.find(d => d.id === formState.selectedDuration);
+        if (duration) setSelectedDuration(duration);
+      }
+
+      // 恢复自定义天数
+      if (formState.customDurationDays) {
+        setCustomDurationDays(formState.customDurationDays);
+      }
+
+      // 恢复购买类型
+      if (formState.purchaseType) {
+        setPurchaseType(formState.purchaseType);
+      }
+
+      // 恢复带宽模式
+      if (formState.bandwidthMode) {
+        setBandwidthMode(formState.bandwidthMode);
+      }
+
+      // 恢复支付方式
+      if (formState.paymentMethod) {
+        setPaymentMethod(formState.paymentMethod);
+      }
+
+      // 注意：selectedCycle 和 selectedSku 需要在后续加载后恢复
+      // 这些将在对应的 useEffect 中处理
+      setTimeout(() => {
+        if (formState.selectedCycle) {
+          setSelectedCycle(formState.selectedCycle);
+        }
+        if (formState.selectedSku) {
+          setSelectedSku(formState.selectedSku);
+        }
+      }, 100);
+
+    } catch (error) {
+      console.error('[Purchase] Error restoring form state:', error);
+      sessionStorage.removeItem('purchase_form_state');
+    }
+  };
+
+  // 清除表单状态
+  const clearFormState = () => {
+    sessionStorage.removeItem('purchase_form_state');
+    console.log('[Purchase] Form state cleared');
+  };
 
   // Load SKUs when region and scenario change
   useEffect(() => {
@@ -806,6 +934,9 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
       return;
     }
 
+    // 保存表单状态到 sessionStorage（用于支付取消后恢复）
+    saveFormState();
+
     // 准备订单数据
     const durationDays = purchaseType === 'subscription'
       ? selectedCycle?.days
@@ -860,6 +991,9 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
       (data) => {
         console.log('[Purchase] onSuccess callback triggered with data:', data);
         console.log('[Purchase] actualPaymentMethod:', actualPaymentMethod);
+
+        // 支付成功后清除表单状态
+        clearFormState();
 
         // 余额支付成功后，跳转到订单详情页面
         // 检查是否是余额支付（balance:* 格式）

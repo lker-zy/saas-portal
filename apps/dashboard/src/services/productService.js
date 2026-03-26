@@ -84,6 +84,35 @@ export const productService = {
   },
 
   /**
+   * Get available scenarios by country (business categories filtered by country)
+   * @param {string} countryCode - Country code (e.g., 'US', 'JP')
+   * @returns {Promise<{success: boolean, data?: Array, message?: string}>}
+   */
+  async getScenariosByCountry(countryCode) {
+    try {
+      const response = await productAPI.getScenariosByCountry(countryCode);
+
+      if (response.code === 200 || response.code === 0) {
+        return {
+          success: true,
+          data: response.data?.scenarios || response.data || [],
+        };
+      } else {
+        return {
+          success: false,
+          message: response.message || 'Failed to fetch scenarios by country',
+        };
+      }
+    } catch (error) {
+      console.error('Get scenarios by country service error:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to fetch scenarios by country, please try again later',
+      };
+    }
+  },
+
+  /**
    * Get available SKUs for a country and scenario
    * @param {string} country - Country code
    * @param {string} scenario - Scenario ID

@@ -21,6 +21,16 @@ export const productAPI = {
     axios.get('/order/client/products/scenarios'),
 
   /**
+   * Get available scenarios by country (business categories filtered by country)
+   * @param {string} countryCode - Country code (e.g., 'US', 'JP')
+   * @returns {Promise} { scenarios: Array<BusinessCategory> }
+   */
+  getScenariosByCountry: (countryCode) =>
+    axios.get('/order/client/products/scenarios', {
+      params: { country: countryCode },
+    }),
+
+  /**
    * Get available SKUs for a country and scenario
    * @param {string} country - Country code (e.g., 'US', 'GB')
    * @param {string} scenario - Scenario ID (e.g., 'amazon', 'facebook')

@@ -647,41 +647,49 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
       setDataError(null);
 
       try {
-        // 使用 productService 批量加载产品数据
-        const result = await productService.loadProductCatalog();
+        // 第一步：加载地区列表和时长选项
+        const [regionsResult, durationsResult] = await Promise.all([
+          productService.getRegions(),
+          productService.getDurations()
+        ]);
 
-        if (!result.success) {
-          throw new Error(result.message || 'Failed to load product data');
+        if (!regionsResult.success) {
+          throw new Error(regionsResult.message || 'Failed to load regions');
         }
 
-        const { regions, scenarios, durations, resourcePool } = result.data;
-
-        // 设置数据
-        setRegions(regions);
-        setResourcePool(resourcePool);
-
-        // 设置业务类别
-        setBusinessCategories(scenarios);
-        // 自动选择第一个有库存场景的业务类别
-        if (!viewCategory && scenarios.length > 0) {
-          const firstCategoryWithStock = scenarios.find(cat =>
-            cat.scenarios.some(sc => sc.enabled === true)
-          );
-          if (firstCategoryWithStock) {
-            setViewCategory(firstCategoryWithStock);
-          } else {
-            setViewCategory(scenarios[0]);
-          }
+        if (!durationsResult.success) {
+          throw new Error(durationsResult.message || 'Failed to load durations');
         }
+
+        // 设置地区数据
+        setRegions(regionsResult.data);
+        setResourcePool({}); // 资源池数据稍后加载
 
         // 设置时长选项
-        setDurations(durations);
-        if (!selectedDuration && durations.length > 0) {
-          setSelectedDuration(durations[0]);
+        setDurations(durationsResult.data);
+        if (!selectedDuration && durationsResult.data.length > 0) {
+          setSelectedDuration(durationsResult.data[0]);
         }
 
-        // 恢复表单状态（从 sessionStorage）
-        restoreFormState(regions, scenarios, durations);
+        // 如果有保存的国家选择，恢复并加载场景
+        const savedState = sessionStorage.getItem('purchase_form_state');
+        if (savedState) {
+          try {
+            const formState = JSON.parse(savedState);
+            // 检查是否过期（30分钟）
+            const EXPIRY_TIME = 30 * 60 * 1000;
+            if (Date.now() - formState.timestamp <= EXPIRY_TIME && formState.selectedRegion) {
+              const savedRegion = regionsResult.data.find(r => r.code === formState.selectedRegion);
+              if (savedRegion) {
+                setSelectedRegion(savedRegion);
+                // 加载该国家的场景列表
+                await loadScenariosByCountry(savedRegion.code);
+              }
+            }
+          } catch (e) {
+            console.error('Failed to restore saved state:', e);
+          }
+        }
 
       } catch (error) {
         console.error('Error loading product data:', error);
@@ -693,6 +701,45 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
 
     loadProductData();
   }, []);
+
+  // 加载指定国家的场景列表
+  const loadScenariosByCountry = async (countryCode) => {
+    if (!countryCode) {
+      setBusinessCategories([]);
+      setViewCategory(null);
+      return;
+    }
+
+    try {
+      const result = await productService.getScenariosByCountry(countryCode);
+      if (result.success) {
+        const scenarios = result.data;
+        setBusinessCategories(scenarios);
+
+        // 自动选择第一个有库存场景的业务类别
+        if (scenarios.length > 0) {
+          const firstCategoryWithStock = scenarios.find(cat =>
+            cat.scenarios.some(sc => sc.enabled === true)
+          );
+          if (firstCategoryWithStock) {
+            setViewCategory(firstCategoryWithStock);
+          } else {
+            setViewCategory(scenarios[0]);
+          }
+        } else {
+          setViewCategory(null);
+        }
+      } else {
+        console.error('Failed to load scenarios by country:', result.message);
+        setBusinessCategories([]);
+        setViewCategory(null);
+      }
+    } catch (error) {
+      console.error('Error loading scenarios by country:', error);
+      setBusinessCategories([]);
+      setViewCategory(null);
+    }
+  };
 
   // 当业务类别加载完成或当前类别无库存时，自动切换到第一个有库存的类别
   useEffect(() => {
@@ -712,6 +759,16 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
       }
     }
   }, [businessCategories, viewCategory]);
+
+  // 当国家改变时，重新加载该国家的场景列表
+  useEffect(() => {
+    if (selectedRegion) {
+      loadScenariosByCountry(selectedRegion.code);
+      // 清空已选择的场景
+      setSelectedScenarios([]);
+      setSelectedSku(null);
+    }
+  }, [selectedRegion]);
 
   // 保存表单状态到 sessionStorage
   const saveFormState = () => {
@@ -1382,10 +1439,10 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
               <div className="flex rounded-2xl border border-gray-100 overflow-hidden bg-white min-h-[180px] max-h-[330px]">
                 {/* Left Sidebar */}
                 <div className="w-28 shrink-0 bg-[#F8F9FB] flex flex-col">
-                  {businessCategories
-                    .filter(cat => cat.scenarios.some(sc => sc.enabled === true)) // 只显示有库存场景的业务类别
+                  {businessCategories && businessCategories.length > 0 && businessCategories
+                    .filter(cat => cat.scenarios && cat.scenarios.some(sc => sc.enabled === true)) // 只显示有库存场景的业务类别
                     .map(cat => {
-                      const isActive = viewCategory.id === cat.id;
+                      const isActive = viewCategory && viewCategory.id === cat.id;
                       return (
                         <button
                           key={cat.id}
@@ -1407,7 +1464,7 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
 
                 {/* Right Content */}
                 <div className="flex-1 p-5 overflow-y-auto">
-                  {viewCategory.scenarios.filter(sc => sc.enabled === true).length > 0 ? (
+                  {viewCategory && viewCategory.scenarios && viewCategory.scenarios.filter(sc => sc.enabled === true).length > 0 ? (
                     <div className="grid grid-cols-3 gap-3">
                       {viewCategory.scenarios
                         .filter(sc => sc.enabled === true) // 只显示有库存的场景
@@ -1462,7 +1519,7 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
                     </div>
                   ) : (
                     <div className="flex items-center justify-center h-full text-gray-400 text-sm">
-                      该类别暂无可用场景
+                      {viewCategory ? '该类别暂无可用场景' : '请先选择国家/地区'}
                     </div>
                   )}
                 </div>

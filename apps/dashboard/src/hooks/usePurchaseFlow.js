@@ -64,6 +64,11 @@ export const usePurchaseFlow = () => {
           sessionStorage.setItem('pending_order_id', orderId);
           sessionStorage.setItem('pending_order_no', createResult.data.order_no);
 
+          // 保存来源页面信息，用于支付取消后返回
+          const currentUrl = new URL(window.location.href);
+          const currentTab = currentUrl.searchParams.get('tab') || 'dashboard';
+          sessionStorage.setItem('stripe_return_tab', currentTab);
+
           // 直接跳转到 Stripe Checkout
           window.location.href = payResult.checkout_url;
           return { success: true, redirecting: true, checkoutUrl: payResult.checkout_url };

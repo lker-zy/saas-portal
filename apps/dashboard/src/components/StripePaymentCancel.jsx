@@ -11,10 +11,13 @@ export const StripePaymentCancel = () => {
   const { t } = useTranslation();
 
   /**
-   * 返回首页
+   * 返回下单页面
+   * 从 sessionStorage 中读取保存的标签页信息，返回到下单前的页面
    */
-  const handleGoHome = () => {
-    window.location.href = '/?tab=dashboard';
+  const handleReturnToPurchase = () => {
+    // 返回到下单前的标签页
+    const returnTab = sessionStorage.getItem('stripe_return_tab') || 'buy_static_isp';
+    window.location.href = `/?tab=${returnTab}`;
   };
 
   /**
@@ -70,11 +73,11 @@ export const StripePaymentCancel = () => {
             <span>{t('stripe.retryPayment') || '重新支付'}</span>
           </button>
           <button
-            onClick={handleGoHome}
+            onClick={handleReturnToPurchase}
             className="inline-flex items-center gap-2 px-6 py-3 border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-lg transition-colors"
           >
             <Home className="w-4 h-4" />
-            <span>{t('stripe.backHome') || '返回首页'}</span>
+            <span>{t('stripe.backToPurchase') || '返回购买页'}</span>
           </button>
         </div>
       </div>

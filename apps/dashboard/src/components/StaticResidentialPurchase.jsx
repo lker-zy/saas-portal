@@ -614,6 +614,29 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
     return productService.getStockStatus(pool.available, productConfig.stockThreshold || 50);
   };
 
+  // Scenario stock status - 场景库存状态
+  const getScenarioStockStatus = (stock) => {
+    if (stock <= 0) {
+      return {
+        label: '缺货',
+        isOutOfStock: true,
+        isLowStock: false
+      };
+    }
+    if (stock < 50) {
+      return {
+        label: `仅剩 ${stock}`,
+        isOutOfStock: false,
+        isLowStock: true
+      };
+    }
+    return {
+      label: '充足',
+      isOutOfStock: false,
+      isLowStock: false
+    };
+  };
+
   const stockStatus = getStockStatus(selectedRegion);
   const isOutOfStock = stockStatus?.isOutOfStock || false;
 
@@ -639,8 +662,16 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
 
         // 设置业务类别
         setBusinessCategories(scenarios);
+        // 自动选择第一个有库存场景的业务类别
         if (!viewCategory && scenarios.length > 0) {
-          setViewCategory(scenarios[0]);
+          const firstCategoryWithStock = scenarios.find(cat =>
+            cat.scenarios.some(sc => sc.enabled === true)
+          );
+          if (firstCategoryWithStock) {
+            setViewCategory(firstCategoryWithStock);
+          } else {
+            setViewCategory(scenarios[0]);
+          }
         }
 
         // 设置时长选项
@@ -662,6 +693,25 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
 
     loadProductData();
   }, []);
+
+  // 当业务类别加载完成或当前类别无库存时，自动切换到第一个有库存的类别
+  useEffect(() => {
+    if (businessCategories.length === 0) return;
+
+    const hasEnabledScenarios = (category) =>
+      category.scenarios && category.scenarios.some(sc => sc.enabled === true);
+
+    // 如果当前选中的类别没有有库存的场景，切换到第一个有库存的类别
+    if (viewCategory && !hasEnabledScenarios(viewCategory)) {
+      const firstCategoryWithStock = businessCategories.find(cat =>
+        hasEnabledScenarios(cat)
+      );
+      if (firstCategoryWithStock) {
+        console.log('[Purchase] Switching to first category with stock:', firstCategoryWithStock.name);
+        setViewCategory(firstCategoryWithStock);
+      }
+    }
+  }, [businessCategories, viewCategory]);
 
   // 保存表单状态到 sessionStorage
   const saveFormState = () => {
@@ -1297,8 +1347,12 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
                         <span className="text-gray-400">-{region.enName}</span>
                       </div>
                       {status && (
-                        <span className="text-[#1A73E8] font-medium">
-                          {status.isLowStock || status.isOutOfStock ? status.label : `仅剩 ${Math.floor(Math.random() * 50) + 20}`}
+                        <span className={`text-[11px] font-medium ${
+                          status.isOutOfStock ? 'text-red-500' :
+                          status.isLowStock ? 'text-amber-600' :
+                          'text-emerald-600'
+                        }`}>
+                          {status.label}
                         </span>
                       )}
                     </div>
@@ -1328,72 +1382,89 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
               <div className="flex rounded-2xl border border-gray-100 overflow-hidden bg-white min-h-[180px] max-h-[330px]">
                 {/* Left Sidebar */}
                 <div className="w-28 shrink-0 bg-[#F8F9FB] flex flex-col">
-                  {businessCategories.map(cat => {
-                    const isActive = viewCategory.id === cat.id;
-                    return (
-                      <button
-                        key={cat.id}
-                        onClick={() => setViewCategory(cat)}
-                        className={`relative w-full text-center py-4 text-[13px] font-medium transition-all ${
-                          isActive
-                            ? 'text-[#1A73E8] bg-white font-bold'
-                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100/50'
-                        }`}
-                      >
-                        {isActive && (
-                          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 bg-[#1A73E8] rounded-r-full"></div>
-                        )}
-                        {cat.name}
-                      </button>
-                    );
-                  })}
+                  {businessCategories
+                    .filter(cat => cat.scenarios.some(sc => sc.enabled === true)) // 只显示有库存场景的业务类别
+                    .map(cat => {
+                      const isActive = viewCategory.id === cat.id;
+                      return (
+                        <button
+                          key={cat.id}
+                          onClick={() => setViewCategory(cat)}
+                          className={`relative w-full text-center py-4 text-[13px] font-medium transition-all ${
+                            isActive
+                              ? 'text-[#1A73E8] bg-white font-bold'
+                              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100/50'
+                          }`}
+                        >
+                          {isActive && (
+                            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 bg-[#1A73E8] rounded-r-full"></div>
+                          )}
+                          {cat.name}
+                        </button>
+                      );
+                    })}
                 </div>
 
                 {/* Right Content */}
                 <div className="flex-1 p-5 overflow-y-auto">
-                  <div className="grid grid-cols-3 gap-3">
-                    {viewCategory.scenarios.map(sc => {
-                       const isActive = selectedScenarios.length > 0 && selectedScenarios[0].id === sc.id;
-                       return (
-                        <button
-                          key={sc.id}
-                          onClick={() => {
-                            // 单选模式：直接替换为当前选中的场景
-                            const newSelection = [{ ...sc, categoryId: viewCategory.id, categoryName: viewCategory.name }];
-                            setSelectedScenarios(newSelection);
-                            setUserOverrideMode(false);
-                            setSelectedSku(null);
-                          }}
-                          className={`relative flex items-center justify-between px-3 py-2.5 rounded-xl border transition-all duration-200 ease-in-out group bg-white active:scale-[0.98] ${
-                            isActive
-                              ? 'border-[#1A73E8] shadow-sm ring-1 ring-[#1A73E8] ring-opacity-50'
-                              : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-md bg-white flex items-center justify-center overflow-hidden shrink-0 transition-transform duration-200 group-hover:scale-110">
-                            {sc.id === 'ebay' ? (
-                              <EbayIcon className="w-full h-full object-contain" />
-                            ) : scenarioIcons[sc.id] ? (
-                              <img src={scenarioIcons[sc.id]} alt={sc.name} className="w-full h-full object-contain" />
-                            ) : (
-                              <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-400 text-xs font-bold">
-                                {sc.name[0]}
+                  {viewCategory.scenarios.filter(sc => sc.enabled === true).length > 0 ? (
+                    <div className="grid grid-cols-3 gap-3">
+                      {viewCategory.scenarios
+                        .filter(sc => sc.enabled === true) // 只显示有库存的场景
+                        .map(sc => {
+                         const isActive = selectedScenarios.length > 0 && selectedScenarios[0].id === sc.id;
+                         const stockStatus = getScenarioStockStatus(sc.stock || 0);
+                         return (
+                          <button
+                            key={sc.id}
+                            onClick={() => {
+                              // 单选模式：直接替换为当前选中的场景
+                              const newSelection = [{ ...sc, categoryId: viewCategory.id, categoryName: viewCategory.name }];
+                              setSelectedScenarios(newSelection);
+                              setUserOverrideMode(false);
+                              setSelectedSku(null);
+                            }}
+                            className={`relative flex items-center justify-between px-3 py-2.5 rounded-xl border transition-all duration-200 ease-in-out group bg-white active:scale-[0.98] ${
+                              isActive
+                                ? 'border-[#1A73E8] shadow-sm ring-1 ring-[#1A73E8] ring-opacity-50'
+                                : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-md bg-white flex items-center justify-center overflow-hidden shrink-0 transition-transform duration-200 group-hover:scale-110">
+                              {sc.id === 'ebay' ? (
+                                <EbayIcon className="w-full h-full object-contain" />
+                              ) : scenarioIcons[sc.id] ? (
+                                <img src={scenarioIcons[sc.id]} alt={sc.name} className="w-full h-full object-contain" />
+                              ) : (
+                                <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-400 text-xs font-bold">
+                                  {sc.name[0]}
+                                </div>
+                              )}
+                            </div>
+                              <span className="text-[12px] font-bold text-gray-900" title={sc.name}>{sc.name}</span>
+                            </div>
+                            <span className={`text-[11px] font-medium whitespace-nowrap ${
+                              stockStatus.isOutOfStock ? 'text-red-500' :
+                              stockStatus.isLowStock ? 'text-amber-600' :
+                              'text-emerald-600'
+                            }`}>
+                              {stockStatus.label}
+                            </span>
+                            {isActive && (
+                              <div className="absolute top-0 right-0 w-0 h-0 border-t-[12px] border-r-[12px] border-t-[#1A73E8] border-r-[#1A73E8] rounded-bl-lg rounded-tr-lg">
+                                {/* Optional: Checkmark icon could go here if space permits, but simple triangle is cleaner */}
                               </div>
                             )}
-                          </div>
-                            <span className="text-[12px] font-bold text-gray-900" title={sc.name}>{sc.name}</span>
-                          </div>
-                          <span className="text-[11px] text-[#1A73E8] font-medium whitespace-nowrap">仅剩 45</span>
-                          {isActive && (
-                            <div className="absolute top-0 right-0 w-0 h-0 border-t-[12px] border-r-[12px] border-t-[#1A73E8] border-r-[#1A73E8] rounded-bl-lg rounded-tr-lg">
-                              {/* Optional: Checkmark icon could go here if space permits, but simple triangle is cleaner */}
-                            </div>
-                          )}
-                        </button>
-                       )
-                    })}
-                  </div>
+                          </button>
+                         )
+                      })}
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-gray-400 text-sm">
+                      该类别暂无可用场景
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

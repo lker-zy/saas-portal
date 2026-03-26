@@ -3998,7 +3998,15 @@ const App = () => {
     const tabParam = urlParams.get('tab');
     if (tabParam && tabParam !== activeTab) {
       console.log('[Dashboard] URL tab param detected:', tabParam, '- switching tab');
-      setActiveTab(tabParam);
+
+      // 处理购买类型参数：将 buy_static_isp 等映射到 purchase tab
+      const purchaseTypes = ['buy_static_isp', 'buy_dynamic_isp', 'buy_datacenter', 'buy_residential'];
+      if (purchaseTypes.includes(tabParam)) {
+        setPurchaseType(tabParam);
+        setActiveTab('purchase');
+      } else {
+        setActiveTab(tabParam);
+      }
     }
   }, []); // 不依赖 activeTab，只在组件挂载时执行一次
 

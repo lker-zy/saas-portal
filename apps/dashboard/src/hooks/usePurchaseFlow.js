@@ -66,7 +66,7 @@ export const usePurchaseFlow = () => {
 
           // 保存来源页面信息，用于支付取消后返回
           const currentUrl = new URL(window.location.href);
-          const currentTab = currentUrl.searchParams.get('tab') || 'dashboard';
+          const currentTab = currentUrl.searchParams.get('tab') || 'buy_static_isp';
           sessionStorage.setItem('stripe_return_tab', currentTab);
 
           // 直接跳转到 Stripe Checkout

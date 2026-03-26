@@ -5,12 +5,16 @@ import { XCircle, Home, RotateCcw } from 'lucide-react';
  * Stripe 支付取消页面
  */
 export const StripePaymentCancel = () => {
-  const handleGoHome = () => {
-    window.location.href = '/';
+  const handleReturnToDashboard = () => {
+    // 返回到 dashboard 的购买页面
+    const returnTab = sessionStorage.getItem('stripe_return_tab') || 'buy_static_isp';
+    window.location.href = `/dashboard?tab=${returnTab}`;
   };
 
   const handleRetry = () => {
-    window.location.href = '/?tab=purchase';
+    // 返回到 dashboard 的购买页面重新支付
+    const returnTab = sessionStorage.getItem('stripe_return_tab') || 'buy_static_isp';
+    window.location.href = `/dashboard?tab=${returnTab}`;
   };
 
   return (
@@ -67,11 +71,11 @@ export const StripePaymentCancel = () => {
               <span>重新支付</span>
             </button>
             <button
-              onClick={handleGoHome}
+              onClick={handleReturnToDashboard}
               className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 border border-gray-300 font-semibold rounded-xl transition-all"
             >
               <Home className="w-4 h-4" />
-              <span>返回首页</span>
+              <span>返回购买页</span>
             </button>
           </div>
         </div>

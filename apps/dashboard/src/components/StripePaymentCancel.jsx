@@ -17,7 +17,7 @@ export const StripePaymentCancel = () => {
   const handleReturnToPurchase = () => {
     // 返回到下单前的标签页
     const returnTab = sessionStorage.getItem('stripe_return_tab') || 'buy_static_isp';
-    window.location.href = `/?tab=${returnTab}`;
+    window.location.href = `/dashboard?tab=${returnTab}`;
   };
 
   /**

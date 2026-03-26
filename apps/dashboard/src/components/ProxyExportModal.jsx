@@ -513,6 +513,65 @@ const ProxyExportModal = ({ isOpen, onClose, selectedProxies = [] }) => {
       return `ss://${base64UserInfo}@${ip}:${port}#Node-${p.id}`;
     }
 
+    // TUIC 协议
+    if (protocol === 'tuic') {
+      // TUIC URL 格式: tuic://uuid:password@server:port?congestion_control=&udp_relay=&sni=&alpn=#name
+      const uuid = p.uuid || '';
+      const password = p.password || '';
+      const tls = p.TLSConfig || p.tls || {};
+
+      // 构建基础URL: tuic://uuid:password@server:port
+      const auth = uuid ? `${uuid}:${password}` : `:${password}`;
+      let url = `tuic://${auth}@${ip}:${port}`;
+
+      // 构建查询参数
+      const params = new URLSearchParams();
+
+      // 拥塞控制
+      const congestionControl = tls.congestion_control || tls.congestionControl || 'cubic';
+      if (congestionControl) {
+        params.append('congestion_control', congestionControl);
+      }
+
+      // UDP 中继
+      const udpRelay = tls.udp_relay !== undefined ? tls.udp_relay : true;
+      params.append('udp_relay', udpRelay ? 'true' : 'false');
+
+      // 心跳间隔
+      if (tls.heartbeat) {
+        params.append('heartbeat', tls.heartbeat);
+      }
+
+      // TLS 配置
+      if (tls.enabled || tls.server_name) {
+        // SNI
+        if (tls.server_name) {
+          params.append('sni', tls.server_name);
+        }
+
+        // ALPN
+        if (tls.alpn && tls.alpn.length > 0) {
+          params.append('alpn', tls.alpn.join(','));
+        }
+
+        // 跳过证书验证
+        if (tls.skip_cert_verify) {
+          params.append('skip-cert-verify', 'true');
+        }
+      }
+
+      // 添加查询参数
+      const queryString = params.toString();
+      if (queryString) {
+        url += `?${queryString}`;
+      }
+
+      // 添加节点名称
+      url += `#Node-${p.id}`;
+
+      return url;
+    }
+
     // Hysteria2 协议
     if (protocol === 'hysteria2' || protocol === 'hy2') {
       return `hysteria2://${p.uuid || p.password}@${ip}:${port}?sni=${ip}#Node-${p.id}`;

@@ -671,10 +671,8 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
           setSelectedDuration(durationsResult.data[0]);
         }
 
-        // 尝试恢复保存的国家选择，或默认选择第一个有库存的国家
+        // 如果有保存的国家选择，恢复并加载场景
         const savedState = sessionStorage.getItem('purchase_form_state');
-        let countryToLoad = null;
-
         if (savedState) {
           try {
             const formState = JSON.parse(savedState);
@@ -683,26 +681,14 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
             if (Date.now() - formState.timestamp <= EXPIRY_TIME && formState.selectedRegion) {
               const savedRegion = regionsResult.data.find(r => r.code === formState.selectedRegion);
               if (savedRegion) {
-                countryToLoad = savedRegion;
+                setSelectedRegion(savedRegion);
+                // 加载该国家的场景列表
+                await loadScenariosByCountry(savedRegion.code);
               }
             }
           } catch (e) {
             console.error('Failed to restore saved state:', e);
           }
-        }
-
-        // 如果没有保存的国家，或保存的国家无效，选择第一个有库存的国家
-        if (!countryToLoad) {
-          const firstEnabledRegion = regionsResult.data.find(r => r.enabled === true);
-          if (firstEnabledRegion) {
-            countryToLoad = firstEnabledRegion;
-          }
-        }
-
-        // 加载选中国家的场景列表
-        if (countryToLoad) {
-          setSelectedRegion(countryToLoad);
-          await loadScenariosByCountry(countryToLoad.code);
         }
 
       } catch (error) {

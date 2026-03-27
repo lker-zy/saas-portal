@@ -702,6 +702,35 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
     loadProductData();
   }, []);
 
+  // 当 SKU 更新时，自动切换到有 SKU 的计费模式
+  useEffect(() => {
+    const hasTrafficSkus = skus.traffic && skus.traffic.length > 0;
+    const hasBandwidthSkus = skus.bandwidth && skus.bandwidth.length > 0;
+
+    // 如果当前选中的模式没有 SKU，自动切换
+    if (bandwidthMode === 'traffic' && !hasTrafficSkus && hasBandwidthSkus) {
+      setBandwidthMode('bandwidth');
+      setSelectedSku(null);
+    } else if (bandwidthMode === 'bandwidth' && !hasBandwidthSkus && hasTrafficSkus) {
+      setBandwidthMode('traffic');
+      setSelectedSku(null);
+    }
+  }, [skus]);
+
+  // 计算当前应该使用的计费模式（用于渲染）
+  const getEffectiveBandwidthMode = () => {
+    const hasTrafficSkus = skus.traffic && skus.traffic.length > 0;
+    const hasBandwidthSkus = skus.bandwidth && skus.bandwidth.length > 0;
+
+    // 如果当前模式有 SKU，使用当前模式
+    if (bandwidthMode === 'traffic' && hasTrafficSkus) return 'traffic';
+    if (bandwidthMode === 'bandwidth' && hasBandwidthSkus) return 'bandwidth';
+    // 否则使用第一个有 SKU 的模式
+    if (hasTrafficSkus) return 'traffic';
+    if (hasBandwidthSkus) return 'bandwidth';
+    return bandwidthMode; // fallback
+  };
+
   // 加载指定国家的场景列表
   const loadScenariosByCountry = async (countryCode) => {
     if (!countryCode) {
@@ -1648,26 +1677,47 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
             </div>
 
             {/* Billing Mode & SKU */}
-            <div>
-              <SectionLabel 
-                title="规格套餐" required
-                extra={
-                  <div className="flex bg-gray-100 p-0.5 rounded-lg">
-                    <button 
-                      onClick={() => { setUserOverrideMode(true); setBandwidthMode('traffic'); setSelectedSku(null); }}
-                      className={`px-2.5 py-1 text-[11px] font-semibold rounded-md transition-all duration-150 ${bandwidthMode === 'traffic' ? 'bg-white text-[#1A73E8] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                    >
-                      按流量
-                    </button>
-                    <button 
-                      onClick={() => { setUserOverrideMode(true); setBandwidthMode('bandwidth'); setSelectedSku(null); }}
-                      className={`px-2.5 py-1 text-[11px] font-semibold rounded-md transition-all duration-150 ${bandwidthMode === 'bandwidth' ? 'bg-white text-[#1A73E8] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                    >
-                      按带宽
-                    </button>
-                  </div>
-                }
-              />
+            {(() => {
+              const hasTrafficSkus = skus.traffic && skus.traffic.length > 0;
+              const hasBandwidthSkus = skus.bandwidth && skus.bandwidth.length > 0;
+
+              // 如果两者都没有 SKU，不显示整个部分
+              if (!hasTrafficSkus && !hasBandwidthSkus) {
+                return null;
+              }
+
+              // 使用函数获取当前应该使用的计费模式
+              const effectiveMode = getEffectiveBandwidthMode();
+              const currentModeLabel = effectiveMode === 'traffic' ? '按流量' : '按带宽';
+
+              return (
+                <div>
+                  <SectionLabel
+                    title="规格套餐"
+                    required
+                    extra={
+                      // 只有当两种 SKU 都存在时，才显示切换按钮
+                      hasTrafficSkus && hasBandwidthSkus ? (
+                        <div className="flex bg-gray-100 p-0.5 rounded-lg">
+                          <button
+                            onClick={() => { setUserOverrideMode(true); setBandwidthMode('traffic'); setSelectedSku(null); }}
+                            className={`px-2.5 py-1 text-[11px] font-semibold rounded-md transition-all duration-150 ${effectiveMode === 'traffic' ? 'bg-white text-[#1A73E8] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                          >
+                            按流量
+                          </button>
+                          <button
+                            onClick={() => { setUserOverrideMode(true); setBandwidthMode('bandwidth'); setSelectedSku(null); }}
+                            className={`px-2.5 py-1 text-[11px] font-semibold rounded-md transition-all duration-150 ${effectiveMode === 'bandwidth' ? 'bg-white text-[#1A73E8] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                          >
+                            按带宽
+                          </button>
+                        </div>
+                      ) : (
+                        // 只有一种 SKU 时，显示标签但不显示切换按钮
+                        <span className="text-xs text-gray-500 font-medium">{currentModeLabel}</span>
+                      )
+                    }
+                  />
               {selectedScenarios.length > 0 && selectedScenarios[selectedScenarios.length - 1]?.recommend?.bandwidthMode && userOverrideMode && (
                 <div className="text-[11px] text-gray-400 -mt-1 mb-2">
                   系统推荐 <span className="font-semibold text-gray-600">{selectedScenarios[selectedScenarios.length - 1].recommend.bandwidthMode === 'traffic' ? '按流量' : '按带宽'}</span>
@@ -1675,7 +1725,7 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
                 </div>
               )}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
-                {(skus[bandwidthMode] || []).map((sku, idx) => {
+                {(skus[effectiveMode] || []).map((sku, idx) => {
                   const isActive = selectedSku?.id === sku.id && selectedSku?.traffic === sku.traffic && selectedSku?.bandwidth === sku.bandwidth;
                   const isPopular = idx === 2; // 3rd item as popular
                   // 使用 productService 获取规格显示和价格
@@ -1698,7 +1748,7 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
                       )}
                       <div className={`text-base font-bold ${isActive ? 'text-[#1A73E8]' : 'text-gray-800'}`}>{specDisplay}</div>
                       <div className={`text-[11px] ${isActive ? 'text-[#1A73E8]' : 'text-gray-400'}`}>
-                        {bandwidthMode === 'traffic' ? '按流量' : '按带宽'}
+                        {effectiveMode === 'traffic' ? '按流量' : '按带宽'}
                       </div>
                       <div className={`text-[12px] font-semibold ${isActive ? 'text-[#1A73E8]' : 'text-gray-500'}`}>
                         {priceDisplay}
@@ -1712,7 +1762,9 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
                   );
                 })}
               </div>
-            </div>
+                </div>
+              );
+            })()}
 
             {/* Quantity */}
             <div>
@@ -1778,7 +1830,7 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
                 <div className="border-t border-dashed border-gray-100 my-2"></div>
                 
                 <OrderRow label="规格套餐" value={selectedSku ? productService.formatSKUSpec(selectedSku) : null} muted={!selectedSku} />
-                <OrderRow label="计费模式" value={bandwidthMode === 'traffic' ? '按流量' : '按带宽'} />
+                <OrderRow label="计费模式" value={getEffectiveBandwidthMode() === 'traffic' ? '按流量' : '按带宽'} />
                 <OrderRow label="购买方式" value={getPurchaseTypeLabel()} />
                 {purchaseType === 'subscription' ? (
                   <OrderRow label="续费周期" value={getCycleLabel()} />

@@ -1,98 +1,110 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
+import BrandLogo from './BrandLogo';
+import wechatQrImg from '../assets/wechat-qr.png';
 
 function HomeFooter() {
+  const { t } = useTranslation();
   return (
     <footer className="home-footer">
       <div className="footer-main">
         {/* Left: Logo */}
         <div className="footer-left">
-          <div className="footer-logo">logo</div>
+          <div className="footer-logo">
+            <BrandLogo />
+          </div>
         </div>
 
         {/* Center: Link Columns */}
         <div className="footer-center">
           {/* Column 1: 产品与服务 */}
           <div className="footer-col">
-            <h4>产品与服务</h4>
-            <a href="/?tab=dynamic_residential">动态住宅代理</a>
-            <a href="/?tab=static_isp">静态住宅代理</a>
-            <a href="/?tab=datacenter">数据中心代理</a>
+            <h4>{t('产品与服务')}</h4>
+            <a href="/?tab=dynamic_residential">{t('动态住宅代理')}</a>
+            <a href="/?tab=static_isp">{t('静态住宅代理')}</a>
+            <a href="/?tab=datacenter">{t('数据中心代理')}</a>
           </div>
 
           {/* Column 2: 热门应用场景 */}
           <div className="footer-col">
-            <h4>热门应用场景</h4>
-            <a href="/?tab=ai_data_mining">AI数据挖掘</a>
-            <a href="/?tab=stock_market">跨票市场</a>
-            <a href="/?tab=smart_crawler">智能爬虫</a>
+            <h4>{t('热门应用场景')}</h4>
+            <a href="/?tab=ai_data_mining">{t('AI访问加速')}</a>
+            <a href="/?tab=stock_market">{t('股票市场')}</a>
+            <a href="/?tab=smart_crawler">{t('智能爬虫')}</a>
           </div>
 
           {/* Column 3: 资源与支持 */}
           <div className="footer-col">
-            <h4>资源与支持</h4>
-            <a href="/?tab=help_center">帮助中心</a>
-            <a href="/?tab=api_docs">API文档</a>
-            <a href="/?tab=faq">常见问题</a>
+            <h4>{t('资源与支持')}</h4>
+            <a href="/?tab=help_center">{t('帮助中心')}</a>
+            <a href="/?tab=api_docs">{t('API文档')}</a>
+            <a href="/?tab=faq">{t('常见问题')}</a>
           </div>
 
           {/* Column 4: 法律与合规 */}
           <div className="footer-col">
-            <h4>法律与合规</h4>
-            <a href="/?tab=privacy">隐私政策</a>
-            <a href="/?tab=terms">服务条款</a>
-            <a href="/?tab=refund">退款协议</a>
+            <h4>{t('法律合规信息')}</h4>
+            <a href="/?tab=privacy">{t('隐私政策')}</a>
+            <a href="/?tab=terms">{t('服务条款')}</a>
+            <a href="/?tab=refund">{t('退款协议')}</a>
           </div>
 
           {/* Column 5: 关于我们 */}
           <div className="footer-col">
-            <h4>关于我们</h4>
-            <a href="/?tab=about">公司简介</a>
-            <a href="/?tab=contact">联系我们</a>
-            <a href="/?tab=careers">加入我们</a>
+            <h4>{t('关于我们')}</h4>
+            <a href="/?tab=about">{t('公司简介')}</a>
+            <a href="/?tab=contact">{t('联系我们')}</a>
+            <a href="/?tab=careers">{t('加入我们')}</a>
           </div>
         </div>
 
         {/* Right: Contact & Social */}
         <div className="footer-right">
           <div className="footer-contact">
-            <h4>联系方式</h4>
+            <h4>{t('联系方式')}</h4>
             <p><span className="contact-icon">✉️</span> service@quantum-proxy.com</p>
             <p><span className="contact-icon">📍</span> FLAT E19, 10/F, NO.52 HUNG TO ROAD, KWUN TONG HONG KONG</p>
           </div>
           <div className="social-icons">
-            <span className="social-icon" title="微信" style={{ cursor: 'pointer' }}>
+            <span className="social-icon wechat-icon-wrapper" aria-label="wechat" title="微信" style={{ cursor: 'pointer', position: 'relative' }}>
               <svg viewBox="64 64 896 896" width="1em" height="1em" fill="currentColor">
                 <path d="M690.1 377.4c5.9 0 11.8.2 17.6.5-24.4-128.7-158.3-227.1-319.9-227.1C209 150.8 64 271.4 64 420.2c0 81.1 43.6 154.2 111.9 203.6a21.5 21.5 0 019.1 17.6c0 2.4-.5 4.6-1.1 6.9-5.5 20.3-14.2 52.8-14.6 54.3-.7 2.6-1.7 5.2-1.7 7.9 0 5.9 4.8 10.8 10.8 10.8 2.3 0 4.2-.9 6.2-2l70.9-40.9c5.3-3.1 11-5 17.2-5 3.2 0 6.4.5 9.5 1.4 33.1 9.5 68.8 14.8 105.7 14.8 6 0 11.9-.1 17.8-.4-7.1-21-10.9-43.1-10.9-66 0-135.8 132.2-245.8 295.3-245.8zm-194.3-86.5c23.8 0 43.2 19.3 43.2 43.1s-19.3 43.1-43.2 43.1c-23.8 0-43.2-19.3-43.2-43.1s19.4-43.1 43.2-43.1zm-215.9 86.2c-23.8 0-43.2-19.3-43.2-43.1s19.3-43.1 43.2-43.1 43.2 19.3 43.2 43.1-19.4 43.1-43.2 43.1zm586.8 415.6c56.9-41.2 93.2-102 93.2-169.7 0-124-120.8-224.5-269.9-224.5-149 0-269.9 100.5-269.9 224.5S540.9 847.5 690 847.5c30.8 0 60.6-4.4 88.1-12.3 2.6-.8 5.2-1.2 7.9-1.2 5.2 0 9.9 1.6 14.3 4.1l59.1 34c1.7 1 3.3 1.7 5.2 1.7a9 9 0 006.4-2.6 9 9 0 002.6-6.4c0-2.2-.9-4.4-1.4-6.6-.3-1.2-7.6-28.3-12.2-45.3-.5-1.9-.9-3.8-.9-5.7.1-5.9 3.1-11.2 7.6-14.5zM600.2 587.2c-19.9 0-36-16.1-36-35.9 0-19.8 16.1-35.9 36-35.9s36 16.1 36 35.9c0 19.8-16.2 35.9-36 35.9zm179.9 0c-19.9 0-36-16.1-36-35.9 0-19.8 16.1-35.9 36-35.9s36 16.1 36 35.9a36.08 36.08 0 01-36 35.9z"></path>
               </svg>
+              {/* 微信二维码悬浮弹窗 */}
+              <div className="wechat-qr-tooltip">
+                <img src={wechatQrImg} alt="微信二维码" />
+                <span className="wechat-qr-label">{t('扫码添加微信')}</span>
+                <div className="wechat-qr-arrow"></div>
+              </div>
             </span>
-            <span className="social-icon" title="Telegram" style={{ cursor: 'pointer' }}>
+            <span className="social-icon" aria-label="send" title="Telegram" style={{ cursor: 'pointer' }}>
               <svg viewBox="64 64 896 896" width="1em" height="1em" fill="currentColor">
                 <path d="M931.4 498.9L94.9 79.5c-3.4-1.7-7.3-2.1-11-1.2a15.99 15.99 0 00-11.7 19.3l86.2 352.2c1.3 5.3 5.2 9.6 10.4 11.3l147.7 50.7-147.6 50.7c-5.2 1.8-9.1 6-10.3 11.3L72.2 926.5c-.9 3.7-.5 7.6 1.2 10.9 3.9 7.9 13.5 11.1 21.5 7.2l836.5-417c3.1-1.5 5.6-4.1 7.2-7.1 3.9-8 .7-17.6-7.2-21.6zM170.8 826.3l50.3-205.6 295.2-101.3c2.3-.8 4.2-2.6 5-5 1.4-4.2-.8-8.7-5-10.2L221.1 403 171 198.2l628 314.9-628.2 313.2z"></path>
               </svg>
             </span>
-            <span className="social-icon" title="Instagram" style={{ cursor: 'pointer' }}>
+            <span className="social-icon" aria-label="instagram" title="Instagram" style={{ cursor: 'pointer' }}>
               <svg viewBox="64 64 896 896" width="1em" height="1em" fill="currentColor">
                 <path d="M512 306.9c-113.5 0-205.1 91.6-205.1 205.1S398.5 717.1 512 717.1 717.1 625.5 717.1 512 625.5 306.9 512 306.9zm0 338.4c-73.4 0-133.3-59.9-133.3-133.3S438.6 378.7 512 378.7 645.3 438.6 645.3 512 585.4 645.3 512 645.3zm213.5-394.6c-26.5 0-47.9 21.4-47.9 47.9s21.4 47.9 47.9 47.9 47.9-21.3 47.9-47.9a47.84 47.84 0 00-47.9-47.9zM911.8 512c0-55.2.5-109.9-2.6-165-3.1-64-17.7-120.8-64.5-167.6-46.9-46.9-103.6-61.4-167.6-64.5-55.2-3.1-109.9-2.6-165-2.6-55.2 0-109.9-.5-165 2.6-64 3.1-120.8 17.7-167.6 64.5C132.6 226.3 118.1 283 115 347c-3.1 55.2-2.6 109.9-2.6 165s-.5 109.9 2.6 165c3.1 64 17.7 120.8 64.5 167.6 46.9 46.9 103.6 61.4 167.6 64.5 55.2 3.1 109.9 2.6 165 2.6 55.2 0 109.9.5 165-2.6 64-3.1 120.8-17.7 167.6-64.5 46.9-46.9 61.4-103.6 64.5-167.6 3.2-55.1 2.6-109.8 2.6-165zm-88 235.8c-7.3 18.2-16.1 31.8-30.2 45.8-14.1 14.1-27.6 22.9-45.8 30.2C695.2 844.7 570.3 840 512 840c-58.3 0-183.3 4.7-235.9-16.1-18.2-7.3-31.8-16.1-45.8-30.2-14.1-14.1-22.9-27.6-30.2-45.8C179.3 695.2 184 570.3 184 512c0-58.3-4.7-183.3 16.1-235.9 7.3-18.2 16.1-31.8 30.2-45.8s27.6-22.9 45.8-30.2C328.7 179.3 453.7 184 512 184s183.3-4.7 235.9 16.1c18.2 7.3 31.8 16.1 45.8 30.2 14.1 14.1 22.9 27.6 30.2 45.8C844.7 328.7 840 453.7 840 512c0 58.3 4.7 183.2-16.2 235.8z"></path>
               </svg>
             </span>
-            <span className="social-icon" title="Facebook" style={{ cursor: 'pointer' }}>
+            <span className="social-icon" aria-label="facebook" title="Facebook" style={{ cursor: 'pointer' }}>
               <svg viewBox="0 0 512 512" width="1em" height="1em" fill="currentColor">
                 <path d="M512 256C512 114.6 397.4 0 256 0S0 114.6 0 256c0 120 82.7 220.8 194.2 248.5V334.2h-56.6v-78.2h56.6v-58.8c0-56.5 33.4-87.8 84.6-87.8 24.5 0 50.2 4.4 50.2 4.4v55.4h-28.3c-27.8 0-36.5 17.3-36.5 35.1v42.2h62.2l-10 78.2h-52.2v170.3C429.3 476.8 512 376 512 256z" fill="#1877F2"></path>
                 <path d="M355.6 334.2l10-78.2H303.4v-42.2c0-17.8 8.7-35.1 36.5-35.1h28.3V123.3s-25.7-4.4-50.2-4.4c-51.2 0-84.6 31.3-84.6 87.8v58.8h-56.6v78.2h56.6v170.3c11.4 1.8 23.1 2.7 34.9 2.7s23.5-.9 34.9-2.7V334.2h52.2z" fill="#fff"></path>
               </svg>
             </span>
-            <span className="social-icon" title="WhatsApp" style={{ cursor: 'pointer' }}>
+            <span className="social-icon" aria-label="whats-app" title="WhatsApp" style={{ cursor: 'pointer' }}>
               <svg viewBox="64 64 896 896" width="1em" height="1em" fill="currentColor">
                 <path d="M713.5 599.9c-10.9-5.6-65.2-32.2-75.3-35.8-10.1-3.8-17.5-5.6-24.8 5.6-7.4 11.1-28.4 35.8-35 43.3-6.4 7.4-12.9 8.3-23.8 2.8-64.8-32.4-107.3-57.8-150-131.1-11.3-19.5 11.3-18.1 32.4-60.2 3.6-7.4 1.8-13.7-1-19.3-2.8-5.6-24.8-59.8-34-81.9-8.9-21.5-18.1-18.5-24.8-18.9-6.4-.4-13.7-.4-21.1-.4-7.4 0-19.3 2.8-29.4 13.7-10.1 11.1-38.6 37.8-38.6 92s39.5 106.7 44.9 114.1c5.6 7.4 77.7 118.6 188.4 166.5 70 30.2 97.4 32.8 132.4 27.6 21.3-3.2 65.2-26.6 74.3-52.5 9.1-25.8 9.1-47.9 6.4-52.5-2.7-4.9-10.1-7.7-21-13z"></path>
                 <path d="M925.2 338.4c-22.6-53.7-55-101.9-96.3-143.3a444.35 444.35 0 00-143.3-96.3C630.6 75.7 572.2 64 512 64h-2c-60.6.3-119.3 12.3-174.5 35.9a445.35 445.35 0 00-142 96.5c-40.9 41.3-73 89.3-95.2 142.8-23 55.4-34.6 114.3-34.3 174.9A449.4 449.4 0 00112 714v152a46 46 0 0046 46h152.1A449.4 449.4 0 00510 960h2.1c59.9 0 118-11.6 172.7-34.3a444.48 444.48 0 00142.8-95.2c41.3-40.9 73.8-88.7 96.5-142 23.6-55.2 35.6-113.9 35.9-174.5.3-60.9-11.5-120-34.8-175.6zm-151.1 438C704 845.8 611 884 512 884h-1.7c-60.3-.3-120.2-15.3-173.1-43.5l-8.4-4.5H188V695.2l-4.5-8.4C155.3 633.9 140.3 574 140 513.7c-.4-99.7 37.7-193.3 107.6-263.8 69.8-70.5 163.1-109.5 262.8-109.9h1.7c50 0 98.5 9.7 144.2 28.9 44.6 18.7 84.6 45.6 119 80 34.3 34.3 61.3 74.4 80 119 19.4 46.2 29.1 95.2 28.9 145.8-.6 99.6-39.7 192.9-110.1 262.7z"></path>
               </svg>
             </span>
-            <span className="social-icon" title="YouTube" style={{ cursor: 'pointer' }}>
+            <span className="social-icon" aria-label="youtube" title="YouTube" style={{ cursor: 'pointer' }}>
               <svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor">
-                <path d="M23.498 6.186a3.016 3.016 0 0 0-5.433 0L12 14.553 5.935 6.186a3.016 3.016 0 0 0-5.433 0L.502 18.186a3.016 3.016 0 0 0 0 5.433l12 12.062 12-12.062a3.016 3.016 0 0 0 0-5.433z"></path>
+                <path d="M23.5 6.2a2.95 2.95 0 00-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A2.95 2.95 0 00.5 6.2 31.3 31.3 0 000 12a31.3 31.3 0 00.5 5.8 2.95 2.95 0 002.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a2.95 2.95 0 002.1-2.1A31.3 31.3 0 0024 12a31.3 31.3 0 00-.5-5.8zM9.6 15.6V8.4l6.2 3.6-6.2 3.6z"></path>
               </svg>
             </span>
-            <span className="social-icon" title="Medium" style={{ cursor: 'pointer' }}>
+            <span className="social-icon" aria-label="medium" title="Medium" style={{ cursor: 'pointer' }}>
               <svg viewBox="64 64 896 896" width="1em" height="1em" fill="currentColor">
                 <path d="M834.7 279.8l61.3-58.9V208H683.7L532.4 586.4 360.3 208H137.7v12.9l71.6 86.6c7 6.4 10.6 15.8 9.7 25.2V673c2.2 12.3-1.7 24.8-10.3 33.7L128 805v12.7h228.6v-12.9l-80.6-98a39.99 39.99 0 01-11.1-33.7V378.7l200.7 439.2h23.3l172.6-439.2v349.9c0 9.2 0 11.1-6 17.2l-62.1 60.3V819h301.2v-12.9l-59.9-58.9c-5.2-4-7.9-10.7-6.8-17.2V297a18.1 18.1 0 016.8-17.2z"></path>
               </svg>
@@ -103,7 +115,7 @@ function HomeFooter() {
 
       {/* Bottom */}
       <div className="footer-bottom">
-        <p></p>
+        <p>{t('版权所有')} © 2026 Quantum-Proxy. All rights reserved.</p>
       </div>
     </footer>
   );

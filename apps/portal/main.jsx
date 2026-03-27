@@ -1,107 +1,17 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
+import './src/i18n'; // Initialize i18n
 
 // Debug: 确认 main.jsx 被加载
 console.log('[Main] main.jsx loaded!');
 console.log('[Main] Location:', window.location.pathname, window.location.search, window.location.hash);
-console.log('[Main] Environment:', import.meta.env?.DEV ? 'Development' : 'Production');
 
 import HomePage from './components/HomePage';
 import StaticResidentialPurchase from './components/StaticResidentialPurchase';
 import RegisterPage from './components/RegisterPage';
 import LoginPage from './components/LoginPage';
-import StripePaymentSuccess from './components/StripePaymentSuccess';
-import StripePaymentCancel from './components/StripePaymentCancel';
-
-// 根据环境选择 dashboardLoader - 使用 Vite 的条件导入
-let loadDashboardSPA;
-let dashboardLoaderReady = false;
-
-// 创建一个 Promise 来等待 loader 加载完成
-const dashboardLoaderPromise = (async () => {
-  try {
-    if (import.meta.env?.DEV) {
-      console.log('[Main] Importing dashboardLoader.dev.js for development');
-      const module = await import('./utils/dashboardLoader.dev.js');
-      loadDashboardSPA = module.loadDashboardSPA;
-      console.log('[Main] Development dashboard loader loaded');
-    } else {
-      console.log('[Main] Importing dashboardLoader.js for production');
-      const module = await import('./utils/dashboardLoader.js');
-      loadDashboardSPA = module.loadDashboardSPA;
-      console.log('[Main] Production dashboard loader loaded');
-    }
-    dashboardLoaderReady = true;
-  } catch (err) {
-    console.error('[Main] Failed to load dashboard loader:', err);
-    dashboardLoaderReady = true; // 标记为已尝试加载
-  }
-})();
-
-// 辅助函数：等待 dashboard loader 准备就绪
-async function waitForDashboardLoader() {
-  await dashboardLoaderPromise;
-  return loadDashboardSPA;
-}
-
-// 恢复 Portal 状态（用于从 Dashboard 返回其他页面）
-function restorePortalState() {
-  console.log('[Main] Restoring Portal state...');
-
-  // 隐藏 dashboard
-  const dashboardRoot = document.getElementById('dashboard-root');
-  if (dashboardRoot) {
-    dashboardRoot.style.display = 'none';
-    console.log('[Main] Hidden dashboard-root');
-  }
-
-  // 显示主应用根元素
-  const rootEl = document.getElementById('root');
-  if (rootEl) {
-    rootEl.style.display = 'block';
-  }
-
-  // 显示帮助中心
-  const helpCenter = document.getElementById('help-center-page');
-  if (helpCenter) {
-    helpCenter.style.display = 'block';
-  }
-
-  // 显示 Footer
-  const footer = document.querySelector('.quantum-footer');
-  if (footer) {
-    footer.style.display = 'block';
-  }
-
-  // 恢复页面过渡叠加层
-  const pageOverlay = document.getElementById('page-transition-overlay');
-  if (pageOverlay) {
-    pageOverlay.style.display = '';
-  }
-
-  // 恢复 Portal 导航元素
-  const homeHeader = document.querySelector('.home-header');
-  if (homeHeader) {
-    homeHeader.style.display = '';
-  }
-
-  // 恢复移动端导航抽屉
-  const mobileNavDrawer = document.querySelector('.mobile-nav-drawer');
-  if (mobileNavDrawer) {
-    mobileNavDrawer.style.display = '';
-  }
-
-  // 重新启用 Portal 的 CSS
-  const portalLinks = document.querySelectorAll('link[href*="/css/"], link[href="/tailwind.css"]');
-  portalLinks.forEach(link => {
-    link.disabled = false;
-    console.log('[Main] Re-enabled portal CSS:', link.href);
-  });
-
-  console.log('[Main] Portal state restored');
-}
-
+import { loadDashboardSPA } from './utils/dashboardLoader';
 import StaticISPPage from './components/StaticISPPage';
 import SolutionsPage from './components/SolutionsPage';
 import CompanyPage from './components/CompanyPage';
@@ -151,42 +61,10 @@ const params = new URLSearchParams(window.location.search);
 const tab = params.get('tab');
 const hash = window.location.hash;
 
-console.log('[Main] Route check:', { pathname, tab, hash });
-
-// 对于所有非 Dashboard 路由，恢复 Portal 状态
-// 这确保从 Dashboard 导航到其他页面时，Portal 的 CSS 和元素正确恢复
-if (pathname !== '/dashboard') {
-  restorePortalState();
-}
-
-// ───── Route: /payment/success ─────
-if (pathname === '/payment/success') {
-  console.log('[Main] === PAYMENT SUCCESS ROUTE ===');
-  hideMainApp();
-  const mountEl = getMountPoint('payment-success-root');
-  const root = ReactDOM.createRoot(mountEl);
-  root.render(
-    <React.StrictMode>
-      <StripePaymentSuccess />
-    </React.StrictMode>
-  );
-}
-
-// ───── Route: /payment/cancel ─────
-else if (pathname === '/payment/cancel') {
-  console.log('[Main] === PAYMENT CANCEL ROUTE ===');
-  hideMainApp();
-  const mountEl = getMountPoint('payment-cancel-root');
-  const root = ReactDOM.createRoot(mountEl);
-  root.render(
-    <React.StrictMode>
-      <StripePaymentCancel />
-    </React.StrictMode>
-  );
-}
+console.log('[Main] Route check:', { pathname, tab, hash, isHome: !tab && !hash && pathname === '/' });
 
 // 首页：使用 HomePage 组件渲染
-else if (!tab && !hash && pathname === '/') {
+if (!tab && !hash && pathname === '/') {
   console.log('[Main] === HOME PAGE ROUTE ===');
 
   // 确保帮助中心隐藏
@@ -238,17 +116,7 @@ if (pathname === '/login' || hash === '#login' || hash === '#/login') {
 // Dashboard 作为独立 SPA，使用动态 HTML 加载
 if (pathname === '/dashboard') {
   console.log('[Main] === DASHBOARD ROUTE - Loading as independent SPA ===');
-  // 等待 dashboard loader 加载完成
-  waitForDashboardLoader().then(loader => {
-    if (loader) {
-      console.log('[Main] Dashboard loader ready, loading dashboard...');
-      loader();
-    } else {
-      console.error('[Main] Dashboard loader failed to load');
-    }
-  }).catch(err => {
-    console.error('[Main] Error waiting for dashboard loader:', err);
-  });
+  loadDashboardSPA();
 }
 
 // ───── Route: Purchase pages (all product types) ─────

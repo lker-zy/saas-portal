@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 const steps = [
   {
@@ -19,19 +20,20 @@ const steps = [
 ];
 
 function QuickStartSection() {
+  const { t } = useTranslation();
   return (
     <section
       className="quick-start-section"
       style={{ backgroundImage: `url("/assets/home4-BDYEdLJU.png")` }}
     >
-      <h2 className="section-title">如何快速上手使用？</h2>
-      <p>仅需几步，轻松定义您的代理配置。从选择国家/地区和具体使用场景（如跨境电商、社交媒体），到设定IP级别、使用终端和交付协议，每项选择都将精准匹配您的业务场景。</p>
+      <h2 className="section-title">{t('如何快速开始使用？')}</h2>
+      <p>{t('quickstart.intro')}</p>
       <div className="steps-container">
         {steps.map((step, index) => (
           <div key={index} className="step-card">
             <div className="step-number">{step.number}</div>
-            <h3>{step.title}</h3>
-            <p>{step.description}</p>
+            <h3>{t(step.title)}</h3>
+            <p>{t(step.description)}</p>
           </div>
         ))}
       </div>

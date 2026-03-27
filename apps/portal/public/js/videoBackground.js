@@ -338,9 +338,6 @@
 
     if (!videoContainer) initVideo();
 
-    // 再次检查 videoContainer 是否成功创建
-    if (!videoContainer) return;
-
     // 已正确挂载则不再操作
     if (videoContainer.parentNode === heroSection) return;
 
@@ -598,6 +595,13 @@
   var tabsPollTimer = null;
 
   function initTabs() {
+    // 如果 React UseCasesSection 组件已接管 Tab 切换逻辑，则跳过原生 JS 自动播放
+    if (document.querySelector('[data-react-use-cases]')) {
+      if (tabsPollTimer) { clearInterval(tabsPollTimer); tabsPollTimer = null; }
+      tabsInitDone = true;
+      return;
+    }
+
     var tabButtons = Array.from(document.querySelectorAll('button')).filter(function (btn) {
       return tabData[btn.textContent.trim()];
     });

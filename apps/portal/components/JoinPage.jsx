@@ -1,6 +1,8 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 const JoinPage = () => {
+  const { t } = useTranslation();
   return (
     <div style={{ 
       minHeight: '100vh', 
@@ -10,7 +12,7 @@ const JoinPage = () => {
       backgroundColor: '#0f172a', 
       color: '#fff' 
     }}>
-      <h1>加入我们 - 页面建设中</h1>
+      <h1>{t('加入我们 - 页面建设中')}</h1>
     </div>
   );
 };

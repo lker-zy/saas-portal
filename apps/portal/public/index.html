@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="%PUBLIC_URL%/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>client</title>
 
@@ -12,12 +12,15 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700;900&display=swap">
 
     <!-- Tailwind CSS -->
-    <link rel="stylesheet" href="/tailwind.css">
+    <link rel="stylesheet" href="%PUBLIC_URL%/tailwind.css">
 
     <!-- Application CSS (extracted from inline styles) -->
-    <link rel="stylesheet" href="/css/components.css">
-    <link rel="stylesheet" href="/css/footer.css">
-    <link rel="stylesheet" href="/css/global.css">
+    <link rel="stylesheet" href="%PUBLIC_URL%/css/components.css">
+    <link rel="stylesheet" href="%PUBLIC_URL%/css/footer.css">
+    <link rel="stylesheet" href="%PUBLIC_URL%/css/global.css">
+
+    <!-- Vite-built application CSS (home page styles) -->
+    <link rel="stylesheet" href="%PUBLIC_URL%/assets/index-93c08660.css">
   </head>
 
   <body>
@@ -33,7 +36,7 @@
     <div id="root"></div>
     <div id="isp-root" style="display:none;"></div>
 
-    <!-- Quantum Proxy Footer -->
+    <!-- Quantum-Proxy Footer -->
     <footer class="quantum-footer">
       <div class="footer-content">
         <div class="footer-links">
@@ -42,7 +45,7 @@
           <a href="/?tab=refund">Refund Policy</a>
         </div>
         <div class="footer-text">
-          <div class="footer-copyright">&copy; 2026 Quantum Proxy. All rights reserved.</div>
+          <div class="footer-copyright">&copy; 2026 Quantum-Proxy. All rights reserved.</div>
           <div class="footer-disclaimer">This platform provides data services only and does not constitute investment advice.</div>
         </div>
       </div>
@@ -53,7 +56,7 @@
       <!-- Top navigation (consistent with home page) -->
       <header class="home-header" style="z-index: 10001;">
         <div class="header-content">
-          <div class="logo" onclick="window.location.href = window.location.pathname;" style="cursor:pointer;">量子代理</div>
+          <div class="logo" onclick="window.location.href = window.location.pathname;" style="cursor:pointer;">Quantum-Proxy</div>
           <button class="hc-back-home-btn" onclick="if(typeof closeHelpCenter==='function'){closeHelpCenter();}else{window.location.href=window.location.pathname;}">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M15 18l-6-6 6-6"/>
@@ -175,13 +178,16 @@
       </div>
     </div>
 
+    <!-- Vite-built application JavaScript (home page React app) -->
+    <script src="%PUBLIC_URL%/assets/index-b1152f47.js"></script>
+
     <!-- Application JavaScript (extracted from inline scripts) -->
-    <script src="/js/videoBackground.js"></script>
-    <script src="/js/helpCenter.js"></script>
-    <script src="/js/languageSwitcher.js"></script>
-    <script src="/js/navigation.js"></script>
-    <script src="/js/countryInventory.js"></script>
-    <script src="/js/footerCleaner.js"></script>
-    <script src="/js/socialInteraction.js"></script>
+    <script src="%PUBLIC_URL%/js/videoBackground.js"></script>
+    <script src="%PUBLIC_URL%/js/helpCenter.js"></script>
+    <script src="%PUBLIC_URL%/js/languageSwitcher.js"></script>
+    <script src="%PUBLIC_URL%/js/navigation.js"></script>
+    <script src="%PUBLIC_URL%/js/countryInventory.js"></script>
+    <script src="%PUBLIC_URL%/js/footerCleaner.js"></script>
+    <script src="%PUBLIC_URL%/js/socialInteraction.js"></script>
   </body>
 </html>

@@ -1,6 +1,8 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 const StockMarketPage = () => {
+  const { t } = useTranslation();
   return (
     <div style={{ 
       minHeight: '100vh', 
@@ -10,7 +12,7 @@ const StockMarketPage = () => {
       backgroundColor: '#0f172a', 
       color: '#fff' 
     }}>
-      <h1>股票市场 - 页面建设中</h1>
+      <h1>{t('股票市场 - 页面建设中')}</h1>
     </div>
   );
 };

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 const pricingPlans = [
   {
@@ -22,9 +23,10 @@ const pricingPlans = [
 ];
 
 function PricingSection() {
+  const { t } = useTranslation();
   return (
     <section className="pricing-section">
-      <h2 className="section-title">选择代理套餐</h2>
+      <h2 className="section-title">{t('选择代理套餐')}</h2>
       <div className="pricing-cards">
         {pricingPlans.map((plan) => (
           <div
@@ -32,16 +34,16 @@ function PricingSection() {
             className="pricing-card"
             style={{ backgroundImage: `url("${plan.bgImage}")` }}
           >
-            <h3 className="card-title">{plan.title}</h3>
+            <h3 className="card-title">{t(plan.title)}</h3>
             <ul className="features-list">
               {plan.features.map((feature, index) => (
                 <li key={index}>
                   <span className="dot"></span>
-                  {feature}
+                  {t(feature)}
                 </li>
               ))}
             </ul>
-            <button className="pricing-btn">立即购买</button>
+            <button className="pricing-btn">{t('立即购买')}</button>
           </div>
         ))}
       </div>

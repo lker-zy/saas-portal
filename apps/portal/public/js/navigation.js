@@ -305,7 +305,27 @@
   setInterval(updateLinks, 500);
 
   // ========== 手机端汉堡菜单 ==========
+  var mobileMenuResponsiveInitDone = false;
+
+  function cleanupStaticMobileMenu() {
+    document.querySelectorAll('header.home-header').forEach(function(header) {
+      if (header.closest('.home-container')) return;
+      var btn = header.querySelector('.mobile-menu-btn');
+      if (btn) btn.remove();
+      delete header.dataset.mobileMenuInit;
+    });
+
+    document.querySelectorAll('body > .mobile-nav-overlay, body > .mobile-nav-drawer').forEach(function(el) {
+      el.remove();
+    });
+  }
+
   function initMobileMenu() {
+    if (window.innerWidth > 1024) {
+      cleanupStaticMobileMenu();
+      return;
+    }
+
     // 优先选择可见的 header.home-header
     var headers = document.querySelectorAll('header.home-header');
     var header = null;
@@ -517,6 +537,23 @@
     });
   }
 
+  function initMobileMenuResponsiveWatcher() {
+    if (mobileMenuResponsiveInitDone) return;
+    mobileMenuResponsiveInitDone = true;
+
+    var resizeTimer = null;
+    window.addEventListener('resize', function() {
+      window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(function() {
+        if (window.innerWidth > 1024) {
+          cleanupStaticMobileMenu();
+        } else {
+          initMobileMenu();
+        }
+      }, 120);
+    });
+  }
+
   // ========== 帮助中心侧边栏手机端折叠 ==========
   function initHelpCenterSidebarToggle() {
     var sidebar = document.querySelector('.help-sidebar');
@@ -594,6 +631,7 @@
   // 初始化
   function initMobileFeatures() {
     initMobileMenu();
+    initMobileMenuResponsiveWatcher();
     initHelpCenterSidebarToggle();
     initHeaderScrollEffect();
   }

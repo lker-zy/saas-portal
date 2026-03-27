@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 const styles = {
   page: {
@@ -331,69 +332,82 @@ const styles = {
   },
 };
 
-const benefits = [
+const benefitsData = [
   {
     icon: '💰',
-    title: '高额佣金返利',
-    desc: '高额阶梯佣金，用户持续消费您持续获利，终生返佣，躺赚不停。',
+    titleKey: '高额佣金返利',
+    descKey: '高额阶梯佣金，用户持续消费您持续获利，终生返佣，躺赚不停。',
     bg: 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(5,150,105,0.1))',
   },
   {
     icon: '⚡',
-    title: '次月快速提现',
-    desc: '支持微信、支付宝和银行卡多渠道提现，佣金次月到账，提现流程简单快捷。',
+    titleKey: '次月快速提现',
+    descKey: '支持微信、支付宝和银行卡多渠道提现，佣金次月到账，提现流程简单快捷。',
     bg: 'linear-gradient(135deg, rgba(245,158,11,0.15), rgba(217,119,6,0.1))',
   },
   {
     icon: '🎓',
-    title: '专人辅导培训',
-    desc: '一对一运营指导，提供专业推广素材和话术，快速上手无门槛。',
+    titleKey: '专人辅导培训',
+    descKey: '一对一运营指导，提供专业推广素材和话术，快速上手无门槛。',
     bg: 'linear-gradient(135deg, rgba(79,142,255,0.15), rgba(37,99,235,0.1))',
   },
   {
     icon: '📈',
-    title: '实时数据看板',
-    desc: '独立代理后台，实时查看推广数据、用户消费和佣金收益，运营透明。',
+    titleKey: '实时数据看板',
+    descKey: '独立代理后台，实时查看推广数据、用户消费和佣金收益，运营透明。',
     bg: 'linear-gradient(135deg, rgba(139,92,246,0.15), rgba(109,40,217,0.1))',
   },
   {
     icon: '🔗',
-    title: '专属推广链接',
-    desc: '自动生成专属推广链接和二维码，支持多渠道分享追踪，推广更便捷。',
+    titleKey: '专属推广链接',
+    descKey: '自动生成专属推广链接和二维码，支持多渠道分享追踪，推广更便捷。',
     bg: 'linear-gradient(135deg, rgba(236,72,153,0.15), rgba(219,39,119,0.1))',
   },
   {
     icon: '🤝',
-    title: '零门槛零风险',
-    desc: '免费注册成为代理，无需囤货无需垫资，纯推广分佣模式，轻松创业。',
+    titleKey: '零门槛零风险',
+    descKey: '免费注册成为代理，无需囤货无需垫资，纯推广分佣模式，轻松创业。',
     bg: 'linear-gradient(135deg, rgba(14,165,233,0.15), rgba(2,132,199,0.1))',
   },
 ];
 
-const commissionTiers = [
-  { icon: '🌱', title: '初级代理', range: '入门级推广量', rate: '基础', note: '适合个人兼职推广' },
-  { icon: '🌿', title: '高级代理', range: '中等推广量', rate: '进阶', note: '适合全职推广人员', highlight: false },
-  { icon: '🌳', title: '金牌代理', range: '大量推广', rate: '最高', note: '适合团队/工作室', highlight: true },
+const commissionTiersData = [
+  { icon: '🌱', titleKey: '初级代理', rangeKey: '入门级推广量', rateKey: '基础', noteKey: '适合个人兼职推广' },
+  { icon: '🌿', titleKey: '高级代理', rangeKey: '中等推广量', rateKey: '进阶', noteKey: '适合全职推广人员', highlight: false },
+  { icon: '🌳', titleKey: '金牌代理', rangeKey: '大量推广', rateKey: '最高', noteKey: '适合团队/工作室', highlight: true },
 ];
 
-const steps = [
-  { num: '1', title: '免费注册', desc: '填写基本信息，一键注册成为推广代理' },
-  { num: '2', title: '获取链接', desc: '登录代理后台，获取您的专属推广链接' },
-  { num: '3', title: '分享推广', desc: '通过社交媒体、社群等渠道分享推广' },
-  { num: '4', title: '赚取佣金', desc: '用户消费即可获得佣金，次月到账' },
+const stepsData = [
+  { num: '1', titleKey: '免费注册', descKey: '填写基本信息，一键注册成为推广代理' },
+  { num: '2', titleKey: '获取链接', descKey: '登录代理后台，获取您的专属推广链接' },
+  { num: '3', titleKey: '分享推广', descKey: '通过社交媒体、社群等渠道分享推广' },
+  { num: '4', titleKey: '赚取佣金', descKey: '用户消费即可获得佣金，次月到账' },
 ];
 
-const faqs = [
-  { q: '注册需要费用吗？', a: '完全免费！注册成为代理不收取任何费用，零门槛加入。' },
-  { q: '佣金如何计算？', a: '佣金按您推荐用户的实际消费金额按比例计算，具体比例请联系客服了解，终生有效，用户每次消费您都能获得返利。' },
-  { q: '提现有最低金额限制吗？', a: '提现门槛低，支持微信、支付宝和银行卡多种方式。' },
-  { q: '推广素材从哪里获取？', a: '代理后台提供专业推广素材包，包括Banner、文案、视频等，也可联系专属客服定制。' },
+const faqsData = [
+  { qKey: '注册需要费用吗？', aKey: '完全免费！注册成为代理不收取任何费用，零门槛加入。' },
+  { qKey: '佣金如何计算？', aKey: '佣金按您推荐用户的实际消费金额按比例计算，具体比例请联系客服了解，终生有效，用户每次消费您都能获得返利。' },
+  { qKey: '提现有最低金额限制吗？', aKey: '提现门槛低，支持微信、支付宝和银行卡多种方式。' },
+  { qKey: '推广素材从哪里获取？', aKey: '代理后台提供专业推广素材包，包括Banner、文案、视频等，也可联系专属客服定制。' },
 ];
 
 const BecomeAgentPage = () => {
+  const { t } = useTranslation();
   const handleBack = () => {
     window.location.href = window.location.pathname;
   };
+
+  const benefits = benefitsData.map(b => ({ ...b, title: t(b.titleKey), desc: t(b.descKey) }));
+  const commissionTiers = commissionTiersData.map(c => ({ ...c, title: t(c.titleKey), range: t(c.rangeKey), rate: t(c.rateKey), note: t(c.noteKey) }));
+  const steps = stepsData.map(s => ({ ...s, title: t(s.titleKey), desc: t(s.descKey) }));
+  const faqs = faqsData.map(f => ({ q: t(f.qKey), a: t(f.aKey) }));
+
+  const stats = [
+    { value: t('高额'), label: t('阶梯佣金比例') },
+    { value: t('终生'), label: t('返佣有效期') },
+    { value: t('次月'), label: t('佣金到账') },
+    { value: '¥0', label: t('加入成本') },
+  ];
 
   return (
     <div style={styles.page}>
@@ -401,26 +415,20 @@ const BecomeAgentPage = () => {
       <section style={styles.hero}>
         <div style={styles.heroBgOrb1} />
         <div style={styles.heroBgOrb2} />
-        <div style={styles.heroBadge}>🤝 Agent Partner Program</div>
-        <h1 style={styles.heroTitle}>成为代理 · 轻松赚取高额佣金</h1>
+        <div style={styles.heroBadge}>🤝 {t('Agent Partner Program')}</div>
+        <h1 style={styles.heroTitle}>{t('成为代理 · 轻松赚取高额佣金')}</h1>
         <p style={styles.heroDesc}>
-          加入我们的代理推广计划，分享即赚钱！高额终生返佣，
-          支持微信/支付宝极速提现，专人辅导助您快速起步。
+          {t('加入我们的代理推广计划，分享即赚钱！高额终生返佣，支持微信/支付宝极速提现，专人辅导助您快速起步。')}
         </p>
         <div style={styles.heroActions}>
-          <a href="#join" style={styles.btnPrimary}>🚀 立即加入</a>
-          <button onClick={handleBack} style={styles.btnOutline}>← 返回首页</button>
+          <a href="#join" style={styles.btnPrimary}>🚀 {t('立即加入')}</a>
+          <button onClick={handleBack} style={styles.btnOutline}>← {t('返回首页')}</button>
         </div>
       </section>
 
       {/* ── Stats ── */}
       <div style={styles.statsStrip}>
-        {[
-          { value: '高额', label: '阶梯佣金比例' },
-          { value: '终生', label: '返佣有效期' },
-          { value: '次月', label: '佣金到账' },
-          { value: '¥0', label: '加入成本' },
-        ].map((s, i) => (
+        {stats.map((s, i) => (
           <div key={i} style={styles.statItem}>
             <div style={styles.statValue}>{s.value}</div>
             <div style={styles.statLabel}>{s.label}</div>
@@ -430,8 +438,8 @@ const BecomeAgentPage = () => {
 
       {/* ── Benefits ── */}
       <section style={styles.section}>
-        <h2 style={styles.sectionTitle}>代理专属权益</h2>
-        <p style={styles.sectionDesc}>我们为每一位代理伙伴提供全方位支持，助您轻松开启副业</p>
+        <h2 style={styles.sectionTitle}>{t('代理专属权益')}</h2>
+        <p style={styles.sectionDesc}>{t('我们为每一位代理伙伴提供全方位支持，助您轻松开启副业')}</p>
         <div style={styles.cardsGrid}>
           {benefits.map((b, i) => (
             <div
@@ -458,17 +466,17 @@ const BecomeAgentPage = () => {
 
       {/* ── Commission Tiers ── */}
       <section style={styles.section}>
-        <h2 style={styles.sectionTitle}>佣金阶梯</h2>
-        <p style={styles.sectionDesc}>推广越多佣金越高，终生锁定最高佣金等级</p>
+        <h2 style={styles.sectionTitle}>{t('佣金阶梯')}</h2>
+        <p style={styles.sectionDesc}>{t('推广越多佣金越高，终生锁定最高佣金等级')}</p>
         <div style={styles.tiersGrid}>
-          {commissionTiers.map((t, i) => (
-            <div key={i} style={{ ...styles.tier, ...(t.highlight ? styles.tierHighlight : {}) }}>
-              {t.highlight && <div style={styles.tierBadge}>🔥 热门</div>}
-              <div style={styles.tierIcon}>{t.icon}</div>
-              <div style={styles.tierTitle}>{t.title}</div>
-              <div style={styles.tierRange}>{t.range}</div>
-              <div style={styles.tierRate}>{t.rate} 佣金</div>
-              <div style={styles.tierNote}>{t.note}</div>
+          {commissionTiers.map((tier, i) => (
+            <div key={i} style={{ ...styles.tier, ...(tier.highlight ? styles.tierHighlight : {}) }}>
+              {tier.highlight && <div style={styles.tierBadge}>🔥 {t('热门')}</div>}
+              <div style={styles.tierIcon}>{tier.icon}</div>
+              <div style={styles.tierTitle}>{tier.title}</div>
+              <div style={styles.tierRange}>{tier.range}</div>
+              <div style={styles.tierRate}>{tier.rate} {t('佣金')}</div>
+              <div style={styles.tierNote}>{tier.note}</div>
             </div>
           ))}
         </div>
@@ -476,8 +484,8 @@ const BecomeAgentPage = () => {
 
       {/* ── How It Works ── */}
       <section style={styles.section}>
-        <h2 style={styles.sectionTitle}>如何开始</h2>
-        <p style={styles.sectionDesc}>四步轻松开启您的推广赚钱之旅</p>
+        <h2 style={styles.sectionTitle}>{t('如何开始')}</h2>
+        <p style={styles.sectionDesc}>{t('四步轻松开启您的推广赚钱之旅')}</p>
         <div style={styles.stepsGrid}>
           {steps.map((s, i) => (
             <div key={i} style={styles.step}>
@@ -491,8 +499,8 @@ const BecomeAgentPage = () => {
 
       {/* ── FAQ ── */}
       <section style={styles.section}>
-        <h2 style={styles.sectionTitle}>常见问题</h2>
-        <p style={styles.sectionDesc}>关于代理计划，您可能想了解的</p>
+        <h2 style={styles.sectionTitle}>{t('常见问题')}</h2>
+        <p style={styles.sectionDesc}>{t('关于代理计划，您可能想了解的')}</p>
         <div style={styles.faqGrid}>
           {faqs.map((f, i) => (
             <div key={i} style={styles.faqItem}>
@@ -508,15 +516,15 @@ const BecomeAgentPage = () => {
 
       {/* ── CTA ── */}
       <div id="join" style={styles.ctaBanner}>
-        <h2 style={styles.ctaTitle}>加入代理，开启您的副业之旅 🎉</h2>
-        <p style={styles.ctaDesc}>零门槛、零风险、高回报，分享即赚钱</p>
+        <h2 style={styles.ctaTitle}>{t('加入代理，开启您的副业之旅')} 🎉</h2>
+        <p style={styles.ctaDesc}>{t('零门槛、零风险、高回报，分享即赚钱')}</p>
         <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', flexWrap: 'wrap' }}>
-          <a href="mailto:agent@example.com" style={styles.btnPrimary}>📧 申请成为代理</a>
+          <a href="mailto:agent@example.com" style={styles.btnPrimary}>📧 {t('申请成为代理')}</a>
           <a
             href={window.location.pathname + '?tab=business_cooperation'}
             style={styles.btnOutline}
           >
-            🏢 了解企业服务
+            🏢 {t('了解企业服务')}
           </a>
         </div>
       </div>

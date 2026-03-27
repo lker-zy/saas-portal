@@ -1,6 +1,8 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 const DataCenterPage = () => {
+  const { t } = useTranslation();
   return (
     <div style={{ 
       minHeight: '100vh', 
@@ -10,7 +12,7 @@ const DataCenterPage = () => {
       backgroundColor: '#0f172a', 
       color: '#fff' 
     }}>
-      <h1>数据中心代理 - 页面建设中</h1>
+      <h1>{t('数据中心代理 - 页面建设中')}</h1>
     </div>
   );
 };

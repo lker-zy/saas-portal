@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Quantum Proxy - 量子代理</title>
+    <title>Quantum-Proxy</title>
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -33,7 +33,7 @@
     <div id="root"></div>
     <div id="isp-root" style="display:none;"></div>
 
-    <!-- Quantum Proxy Footer -->
+    <!-- Quantum-Proxy Footer -->
     <footer class="quantum-footer">
       <div class="footer-content">
         <div class="footer-links">
@@ -42,7 +42,7 @@
           <a href="/?tab=refund">Refund Policy</a>
         </div>
         <div class="footer-text">
-          <div class="footer-copyright">&copy; 2026 Quantum Proxy. All rights reserved.</div>
+          <div class="footer-copyright">&copy; 2026 Quantum-Proxy. All rights reserved.</div>
           <div class="footer-disclaimer">This platform provides data services only and does not constitute investment advice.</div>
         </div>
       </div>
@@ -53,7 +53,33 @@
       <!-- Top navigation (consistent with home page) -->
       <header class="home-header" style="z-index: 10001;">
         <div class="header-content">
-          <div class="logo" onclick="window.location.href = window.location.pathname;" style="cursor:pointer;">量子代理</div>
+          <div class="logo" onclick="window.location.href = window.location.pathname;" style="cursor:pointer;" aria-label="Quantum-Proxy首页">
+            <span class="brand-logo">
+              <span class="brand-mark" aria-hidden="true">
+                <svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <defs>
+                    <radialGradient id="helpSphereGradient" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(100 100) rotate(90) scale(40)">
+                      <stop offset="0%" stop-color="#7dd3fc" />
+                      <stop offset="60%" stop-color="#00a0ff" />
+                      <stop offset="100%" stop-color="#1d4ed8" />
+                    </radialGradient>
+                    <linearGradient id="helpOrbitGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.6" />
+                      <stop offset="50%" stop-color="#1d4ed8" />
+                      <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.6" />
+                    </linearGradient>
+                  </defs>
+                  <ellipse cx="100" cy="100" rx="90" ry="30" transform="rotate(35 100 100)" stroke="url(#helpOrbitGradient)" stroke-width="4" />
+                  <ellipse cx="100" cy="100" rx="90" ry="30" transform="rotate(-35 100 100)" stroke="url(#helpOrbitGradient)" stroke-width="4" />
+                  <circle cx="100" cy="100" r="40" fill="url(#helpSphereGradient)" />
+                  <circle cx="90" cy="90" r="15" fill="white" fill-opacity="0.2" />
+                </svg>
+              </span>
+              <span class="brand-wordmark">
+                <span class="brand-wordmark-main">Quantum-Proxy</span>
+              </span>
+            </span>
+          </div>
           <button class="hc-back-home-btn" onclick="if(typeof closeHelpCenter==='function'){closeHelpCenter();}else{window.location.href=window.location.pathname;}">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M15 18l-6-6 6-6"/>
@@ -176,7 +202,7 @@
     </div>
 
     <!-- Vite React application -->
-    <script type="module" src="./main.jsx"></script>
+    <script type="module" src="/apps/portal/main.jsx"></script>
 
     <!-- Static JavaScript files (shared by homepage and dynamic routes) -->
     <script src="/js/videoBackground.js"></script>

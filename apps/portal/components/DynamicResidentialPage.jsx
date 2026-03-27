@@ -1,6 +1,8 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 const DynamicResidentialPage = () => {
+  const { t } = useTranslation();
   return (
     <div style={{ 
       minHeight: '100vh', 
@@ -10,7 +12,7 @@ const DynamicResidentialPage = () => {
       backgroundColor: '#0f172a', 
       color: '#fff' 
     }}>
-      <h1>动态住宅代理 - 页面建设中</h1>
+      <h1>{t('动态住宅代理 - 页面建设中')}</h1>
     </div>
   );
 };

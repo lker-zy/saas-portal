@@ -8,8 +8,8 @@
 
   /* ── 社交平台配置 ── */
   var platforms = {
-    wechat:    { name: '微信',      color: '#07C160', action: 'popup',  link: '' },
-    send:      { name: 'Telegram',  color: '#26A5E4', action: 'link',   link: 'https://t.me/quantumproxy' },
+    wechat:    { name: '微信',      color: '#07C160', action: 'none',   link: '' },
+    send:      { name: 'Telegram',  color: '#26A5E4', action: 'link',   link: 'https://t.me/quantum_proxies' },
     instagram: { name: 'Instagram', color: '#E4405F', action: 'link',   link: 'https://www.instagram.com/quantumproxy' },
     facebook:  { name: 'Facebook',  color: '#1877F2', action: 'link',   link: 'https://www.facebook.com/quantumproxy' },
     'whats-app': { name: 'WhatsApp', color: '#25D366', action: 'link',  link: 'https://wa.me/message/quantumproxy' },
@@ -268,7 +268,10 @@
     if (getComputedStyle(el).position === 'static') {
       el.style.position = 'relative';
     }
-    el.style.overflow = 'hidden';
+    // 微信图标需要 overflow:visible 来显示二维码弹窗
+    if (!el.classList.contains('wechat-icon-wrapper')) {
+      el.style.overflow = 'hidden';
+    }
     el.appendChild(ripple);
     setTimeout(function () { if (ripple.parentNode) ripple.parentNode.removeChild(ripple); }, 600);
   }
@@ -329,6 +332,8 @@
       /* 覆盖 hover 默认样式，让 JS 控制品牌色 */
       '.social-icons .social-icon[data-social-bound="1"] {' +
         'transition: all .3s cubic-bezier(.4,0,.2,1) !important;' +
+      '}' +
+      '.social-icons .social-icon[data-social-bound="1"]:not(.wechat-icon-wrapper) {' +
         'overflow: hidden;' +
       '}' +
 

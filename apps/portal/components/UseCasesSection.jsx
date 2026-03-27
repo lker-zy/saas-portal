@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const caseIconSvg = (
   <svg width="60" height="60" viewBox="0 0 60 60" fill="none">
@@ -60,34 +61,53 @@ const useCaseData = [
   }
 ];
 
+const AUTO_PLAY_INTERVAL = 3000;   // 每 3 秒自动切换
+const RESUME_DELAY       = 8000;   // 用户点击后 8 秒恢复自动轮播
+
 function UseCasesSection() {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('ecommerce');
+  const [userPaused, setUserPaused] = useState(false);
+  const resumeTimerRef = useRef(null);
+
+  // ── 自动轮播 ──
+  useEffect(() => {
+    if (userPaused) return;
+
+    const timer = setInterval(() => {
+      setActiveTab(prev => {
+        const idx = useCaseData.findIndex(c => c.id === prev);
+        const next = (idx + 1) % useCaseData.length;
+        return useCaseData[next].id;
+      });
+    }, AUTO_PLAY_INTERVAL);
+
+    return () => clearInterval(timer);
+  }, [userPaused]);
+
+  // ── 用户点击 tab：暂停自动轮播，一段时间后自动恢复 ──
+  const handleTabClick = (id) => {
+    setActiveTab(id);
+    setUserPaused(true);
+
+    if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+    resumeTimerRef.current = setTimeout(() => {
+      setUserPaused(false);
+    }, RESUME_DELAY);
+  };
+
+  // 清理恢复定时器
+  useEffect(() => {
+    return () => {
+      if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+    };
+  }, []);
 
   const currentCase = useCaseData.find(c => c.id === activeTab) || useCaseData[0];
 
-  useEffect(() => {
-    // 初始化 tab 切换功能（模拟原版 videoBackground.js 的功能）
-    const handleTabClick = (e) => {
-      const btn = e.target.closest('button');
-      if (!btn) return;
-
-      const tabName = btn.textContent.trim();
-      const matchedCase = useCaseData.find(c => c.name === tabName);
-      if (matchedCase) {
-        setActiveTab(matchedCase.id);
-      }
-    };
-
-    const tabsContainer = document.querySelector('.use-cases-tabs');
-    if (tabsContainer) {
-      tabsContainer.addEventListener('click', handleTabClick);
-      return () => tabsContainer.removeEventListener('click', handleTabClick);
-    }
-  }, []);
-
   return (
-    <section className="use-cases-section">
-      <h2 className="section-title">在什么场景中能使用到？</h2>
+    <section className="use-cases-section" data-react-use-cases>
+      <h2 className="section-title">{t('在什么场景中能使用到？')}</h2>
 
       {/* Tab Buttons */}
       <div className="use-cases-tabs">
@@ -95,8 +115,9 @@ function UseCasesSection() {
           <button
             key={useCase.id}
             className={`tab-btn ${activeTab === useCase.id ? 'active force-tab-active' : 'force-tab-inactive'}`}
+            onClick={() => handleTabClick(useCase.id)}
           >
-            {useCase.name}
+            {t(useCase.name)}
           </button>
         ))}
       </div>
@@ -106,9 +127,9 @@ function UseCasesSection() {
         {/* Left: Text Content */}
         <div className="use-case-text">
           <div className="case-icon">{caseIconSvg}</div>
-          <h3>{currentCase.title}</h3>
-          <p>{currentCase.desc}</p>
-          <button className="learn-more-btn">了解更多</button>
+          <h3>{t(currentCase.title)}</h3>
+          <p>{t(currentCase.desc)}</p>
+          <button className="learn-more-btn">{t('了解更多')}</button>
         </div>
 
         {/* Right: Illustration */}
@@ -116,13 +137,13 @@ function UseCasesSection() {
           {currentCase.img ? (
             <img
               src={currentCase.img}
-              alt={currentCase.name}
+              alt={t(currentCase.name)}
               className="tab-content-img"
             />
           ) : (
             <img
               src="/assets/home2-D-tg2ggl.png"
-              alt={currentCase.name}
+              alt={t(currentCase.name)}
               className="illustration-img"
             />
           )}

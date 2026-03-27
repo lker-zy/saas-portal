@@ -1,6 +1,8 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 const CrossBorderEcommercePage = () => {
+  const { t } = useTranslation();
   return (
     <div style={{ 
       minHeight: '100vh', 
@@ -10,7 +12,7 @@ const CrossBorderEcommercePage = () => {
       backgroundColor: '#0f172a', 
       color: '#fff' 
     }}>
-      <h1>跨境电商 - 页面建设中</h1>
+      <h1>{t('跨境电商 - 页面建设中')}</h1>
     </div>
   );
 };

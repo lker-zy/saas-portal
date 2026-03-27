@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 const styles = {
   page: {
@@ -313,56 +314,67 @@ const styles = {
   },
 };
 
-const advantages = [
+const advantagesData = [
   {
     icon: '💰',
-    title: '阶梯折扣优惠',
-    desc: '买的越多折扣越大，消费量越高优惠力度越强，显著降低采购成本。',
+    titleKey: '阶梯折扣优惠',
+    descKey: '买的越多折扣越大，消费量越高优惠力度越强，显著降低采购成本。',
     bg: 'linear-gradient(135deg, rgba(79,142,255,0.15), rgba(37,99,235,0.1))',
   },
   {
     icon: '🔌',
-    title: 'API 全面对接',
-    desc: '提供完整的API接口调用能力，轻松集成到您的系统，高效自动化管理。',
+    titleKey: 'API 全面对接',
+    descKey: '提供完整的API接口调用能力，轻松集成到您的系统，高效自动化管理。',
     bg: 'linear-gradient(135deg, rgba(139,92,246,0.15), rgba(109,40,217,0.1))',
   },
   {
     icon: '📦',
-    title: '预充值消耗模式',
-    desc: '无需囤货垫资，按需充值按量消耗，灵活便捷，资金零风险。',
+    titleKey: '预充值消耗模式',
+    descKey: '无需囤货垫资，按需充值按量消耗，灵活便捷，资金零风险。',
     bg: 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(5,150,105,0.1))',
   },
   {
     icon: '🛡️',
-    title: '专属技术支持',
-    desc: '配备专业技术团队一对一对接，7×24小时响应，确保业务稳定运行。',
+    titleKey: '专属技术支持',
+    descKey: '配备专业技术团队一对一对接，7×24小时响应，确保业务稳定运行。',
     bg: 'linear-gradient(135deg, rgba(245,158,11,0.15), rgba(217,119,6,0.1))',
   },
   {
     icon: '🌐',
-    title: '全球优质资源',
-    desc: '覆盖190+国家和地区的海量IP资源，纯净住宅/数据中心IP，高匿可用率99%。',
+    titleKey: '全球优质资源',
+    descKey: '覆盖190+国家和地区的海量IP资源，纯净住宅/数据中心IP，高匿可用率99%。',
     bg: 'linear-gradient(135deg, rgba(236,72,153,0.15), rgba(219,39,119,0.1))',
   },
   {
     icon: '📊',
-    title: '可视化管理后台',
-    desc: '独立经销商后台，实时查看消耗、佣金及客户管理数据，运营一目了然。',
+    titleKey: '可视化管理后台',
+    descKey: '独立经销商后台，实时查看消耗、佣金及客户管理数据，运营一目了然。',
     bg: 'linear-gradient(135deg, rgba(14,165,233,0.15), rgba(2,132,199,0.1))',
   },
 ];
 
-const steps = [
-  { num: '1', title: '提交申请', desc: '填写企业信息与资质材料，提交合作申请表' },
-  { num: '2', title: '资质审核', desc: '专业团队在1-3个工作日内完成资质审核' },
-  { num: '3', title: '签署协议', desc: '双方确认合作条款，正式签署合作协议' },
-  { num: '4', title: '开始合作', desc: '获取专属账户与API权限，即刻开展业务' },
+const stepsData = [
+  { num: '1', titleKey: '提交申请', descKey: '填写企业信息与资质材料，提交合作申请表' },
+  { num: '2', titleKey: '资质审核', descKey: '专业团队在1-3个工作日内完成资质审核' },
+  { num: '3', titleKey: '签署协议', descKey: '双方确认合作条款，正式签署合作协议' },
+  { num: '4', titleKey: '开始合作', descKey: '获取专属账户与API权限，即刻开展业务' },
 ];
 
 const BusinessCooperationPage = () => {
+  const { t } = useTranslation();
   const handleBack = () => {
     window.location.href = window.location.pathname;
   };
+
+  const advantages = advantagesData.map(a => ({ ...a, title: t(a.titleKey), desc: t(a.descKey) }));
+  const steps = stepsData.map(s => ({ ...s, title: t(s.titleKey), desc: t(s.descKey) }));
+
+  const stats = [
+    { value: '190+', label: t('覆盖国家和地区') },
+    { value: '9000万+', label: t('全球IP资源池') },
+    { value: '99.9%', label: t('服务可用率') },
+    { value: t('更多'), label: t('量大折扣更大') },
+  ];
 
   return (
     <div style={styles.page}>
@@ -370,26 +382,20 @@ const BusinessCooperationPage = () => {
       <section style={styles.hero}>
         <div style={styles.heroBgOrb1} />
         <div style={styles.heroBgOrb2} />
-        <div style={styles.heroBadge}>🏢 Enterprise Partner Program</div>
-        <h1 style={styles.heroTitle}>企业服务 · IP转售合作计划</h1>
+        <div style={styles.heroBadge}>🏢 {t('Enterprise Partner Program')}</div>
+        <h1 style={styles.heroTitle}>{t('企业服务 · IP转售合作计划')}</h1>
         <p style={styles.heroDesc}>
-          面向具有ISP/IDC资质的服务商及企业级用户，提供深度定制化合作方案。
-          买的越多折扣越大，专属技术支持与API全接入，助力您快速拓展业务版图。
+          {t('面向具有ISP/IDC资质的服务商及企业级用户，提供深度定制化合作方案。买的越多折扣越大，专属技术支持与API全接入，助力您快速拓展业务版图。')}
         </p>
         <div style={styles.heroActions}>
-          <a href="#apply" style={styles.btnPrimary}>立即申请合作</a>
-          <button onClick={handleBack} style={styles.btnOutline}>← 返回首页</button>
+          <a href="#apply" style={styles.btnPrimary}>{t('立即申请合作')}</a>
+          <button onClick={handleBack} style={styles.btnOutline}>← {t('返回首页')}</button>
         </div>
       </section>
 
       {/* ── Stats ── */}
       <div style={styles.statsStrip}>
-        {[
-          { value: '190+', label: '覆盖国家和地区' },
-          { value: '9000万+', label: '全球IP资源池' },
-          { value: '99.9%', label: '服务可用率' },
-          { value: '更多', label: '量大折扣更大' },
-        ].map((s, i) => (
+        {stats.map((s, i) => (
           <div key={i} style={styles.statItem}>
             <div style={styles.statValue}>{s.value}</div>
             <div style={styles.statLabel}>{s.label}</div>
@@ -399,8 +405,8 @@ const BusinessCooperationPage = () => {
 
       {/* ── Advantages ── */}
       <section style={styles.section}>
-        <h2 style={styles.sectionTitle}>为什么选择企业合作</h2>
-        <p style={styles.sectionDesc}>我们为转售服务商提供全链路支持，让合作更高效、更安心</p>
+        <h2 style={styles.sectionTitle}>{t('为什么选择企业合作')}</h2>
+        <p style={styles.sectionDesc}>{t('我们为转售服务商提供全链路支持，让合作更高效、更安心')}</p>
         <div style={styles.cardsGrid}>
           {advantages.map((a, i) => (
             <div
@@ -428,8 +434,8 @@ const BusinessCooperationPage = () => {
 
       {/* ── Steps ── */}
       <section style={styles.section}>
-        <h2 style={styles.sectionTitle}>合作流程</h2>
-        <p style={styles.sectionDesc}>简单四步，快速开启企业级合作</p>
+        <h2 style={styles.sectionTitle}>{t('合作流程')}</h2>
+        <p style={styles.sectionDesc}>{t('简单四步，快速开启企业级合作')}</p>
         <div style={styles.stepsGrid}>
           {steps.map((s, i) => (
             <div key={i} style={styles.step}>
@@ -443,15 +449,15 @@ const BusinessCooperationPage = () => {
 
       {/* ── CTA ── */}
       <div id="apply" style={styles.ctaBanner}>
-        <h2 style={styles.ctaTitle}>准备好开始合作了吗？</h2>
-        <p style={styles.ctaDesc}>联系我们的商务团队，获取专属合作方案与报价</p>
+        <h2 style={styles.ctaTitle}>{t('准备好开始合作了吗？')}</h2>
+        <p style={styles.ctaDesc}>{t('联系我们的商务团队，获取专属合作方案与报价')}</p>
         <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', flexWrap: 'wrap' }}>
-          <a href="mailto:business@example.com" style={styles.btnPrimary}>📧 联系商务团队</a>
+          <a href="mailto:business@example.com" style={styles.btnPrimary}>📧 {t('联系商务团队')}</a>
           <a
             href={window.location.pathname + '?tab=become_agent'}
             style={styles.btnOutline}
           >
-            🤝 了解代理计划
+            🤝 {t('了解代理计划')}
           </a>
         </div>
       </div>

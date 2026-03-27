@@ -1,19 +1,21 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 function CTASection() {
+  const { t } = useTranslation();
   return (
     <section className="cta-section">
       <div className="section-container">
-        <h2 className="cta-title">开始使用量子代理</h2>
+        <h2 className="cta-title">{t('开始使用Quantum-Proxy')}</h2>
         <p className="cta-desc">
-          注册即送免费测试额度
+          {t('注册即送免费测试额度')}
         </p>
         <div className="cta-buttons">
           <a href="/register" className="cta-button cta-button-primary">
-            免费注册
+            {t('免费注册')}
           </a>
           <a href="/?tab=solutions" className="cta-button cta-button-secondary">
-            解决方案
+            {t('解决方案')}
           </a>
         </div>
       </div>

@@ -1,33 +1,81 @@
 import React, { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 
 function HeroSection() {
+  const { t } = useTranslation();
   const video1Ref = useRef(null);
   const video2Ref = useRef(null);
 
   useEffect(() => {
+    let hasSwitched = false;
+    const v1 = video1Ref.current;
+    const v2 = video2Ref.current;
+
+    // Preload video2
+    if (v2) v2.load();
+
+    const playVideo2 = () => {
+      if (!v2) return;
+      
+      // Make v2 visible and on top before playing to avoid black flash
+      v2.style.zIndex = '2';
+      v2.style.opacity = '1';
+
+      v2.play().then(() => {
+        // Fade out v1 shortly after v2 starts playing
+        setTimeout(() => {
+          if (v1) {
+            v1.style.opacity = '0';
+            v1.style.zIndex = '1';
+            // Pause v1 later to save resources
+            setTimeout(() => {
+                if (v1 && !v1.paused) v1.pause();
+            }, 1500);
+          }
+        }, 100);
+      }).catch(err => {
+        console.warn('[Hero] Loop video play failed:', err);
+        // Fallback: if v2 fails, loop v1
+        if (v1) {
+          v1.loop = true;
+          v1.play().catch(e => console.log('Fallback play failed', e));
+        }
+      });
+    };
+
     // Play intro video
-    if (video1Ref.current) {
-      video1Ref.current.play().catch(err => {
+    if (v1) {
+      v1.play().catch(err => {
         console.log('[Hero] Video autoplay blocked:', err);
       });
     }
 
-    // Switch to loop video after intro ends
-    const handleVideoEnd = () => {
-      if (video2Ref.current) {
-        video2Ref.current.play().catch(err => {
-          console.log('[Hero] Loop video play failed:', err);
-        });
+    const handleTimeUpdate = () => {
+      if (hasSwitched || !v1) return;
+      
+      // Switch 0.4s early to ensure seamless transition
+      const timeLeft = v1.duration - v1.currentTime;
+      if (timeLeft <= 0.4 && v1.duration > 0) {
+        hasSwitched = true;
+        playVideo2();
       }
     };
 
-    if (video1Ref.current) {
-      video1Ref.current.addEventListener('ended', handleVideoEnd);
+    const handleEnded = () => {
+      if (hasSwitched) return;
+      hasSwitched = true;
+      playVideo2();
+    };
+
+    if (v1) {
+      v1.addEventListener('timeupdate', handleTimeUpdate);
+      v1.addEventListener('ended', handleEnded);
     }
 
     return () => {
-      if (video1Ref.current) {
-        video1Ref.current.removeEventListener('ended', handleVideoEnd);
+      if (v1) {
+        v1.removeEventListener('timeupdate', handleTimeUpdate);
+        v1.removeEventListener('ended', handleEnded);
       }
     };
   }, []);
@@ -64,13 +112,13 @@ function HeroSection() {
 
       {/* Hero Content */}
       <div className="hero-content">
-        <h1 className="hero-title">世界级<br />ISP代理</h1>
-        <p className="hero-subtitle">满足多样化业务挑战<br />始终稳定可靠</p>
+        <h1 className="hero-title" dangerouslySetInnerHTML={{ __html: t('hero.title') }}></h1>
+        <p className="hero-subtitle" dangerouslySetInnerHTML={{ __html: t('hero.subtitle') }}></p>
         <button
           className="cta-button"
           onClick={() => window.location.href = '/register'}
         >
-          打造极致连接体验
+          {t('打造极致连接体验')}
         </button>
       </div>
     </section>

@@ -282,7 +282,7 @@ header.home-header {
   box-shadow: none !important;
     
   border-radius: 24px !important;
-  padding: 12px 32px !important;
+  padding: 12px 24px !important;
   transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
   transform: translateZ(0);
   contain: layout style;
@@ -294,9 +294,10 @@ header.home-header .header-content {
   align-items: center !important;
   justify-content: space-between !important;
   flex-wrap: nowrap !important;
+  gap: 12px !important;
+  overflow: visible !important;
 }
 /* 始终显示的元素：可安全设置 display */
-header.home-header .header-content > .mobile-menu-btn,
 header.home-header .header-content > .logo,
 header.home-header .header-content > .lang-switcher,
 header.home-header .header-content > #lang-switcher {
@@ -305,6 +306,12 @@ header.home-header .header-content > #lang-switcher {
   display: flex !important;
   align-items: center !important;
 }
+header.home-header .header-content > .mobile-menu-btn {
+  align-self: center !important;
+  vertical-align: middle !important;
+  align-items: center !important;
+  display: none !important;
+}
 /* nav-menu / login-btn：手机端 display:none，不能强制设置 display */
 header.home-header .header-content > .nav-menu,
 header.home-header .header-content > .login-btn {
@@ -312,10 +319,12 @@ header.home-header .header-content > .login-btn {
   vertical-align: middle !important;
   align-items: center !important;
 }
-/* logo 特殊处理：inline 文本也居中 */
+/* logo 特殊处理：品牌图标居中 */
 header.home-header .header-content > .logo {
   display: inline-flex !important;
   line-height: 1 !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
 }
 /* login-btn 特殊处理：仅在桌面端设置 inline-flex */
 @media (min-width: 769px) {
@@ -328,6 +337,12 @@ header.home-header .header-content > .logo {
     justify-content: center !important;
     align-items: center !important;
     line-height: 1 !important;
+  }
+}
+
+@media (max-width: 1024px) {
+  header.home-header .header-content > .mobile-menu-btn {
+    display: flex !important;
   }
 }
 
@@ -349,27 +364,99 @@ header.home-header:hover {
   transform: translateY(-1px);
 }
 
-/* Logo - 流光渐变动画 */
+/* Logo - 统一品牌图标样式 */
 header.home-header .logo {
-  font-size: 22px !important;
-  font-weight: 700 !important;
-  background: linear-gradient(120deg, #4F8EFF 0%, #8BB4FF 50%, #4F8EFF 100%) !important;
-  background-size: 200% auto !important;
-  -webkit-background-clip: text !important;
-  -webkit-text-fill-color: transparent !important;
-  background-clip: text !important;
-  letter-spacing: -0.3px !important;
-  transition: background-position 0.6s ease !important;
+  background: none !important;
+  transition: transform 0.25s ease, filter 0.25s ease !important;
+  gap: 0 !important;
 }
 header.home-header .logo:hover {
-  background-position: right center !important;
+  transform: translateY(-1px);
+  filter: drop-shadow(0 10px 24px rgba(29, 78, 216, 0.28));
+}
+
+header.home-header .logo .brand-logo {
+  width: auto;
+  height: auto;
+  gap: 14px;
+}
+
+header.home-header .logo .brand-mark {
+  width: 52px;
+  height: 52px;
+}
+
+header.home-header .logo .brand-logo svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+header.home-header .logo .brand-wordmark {
+  position: relative;
+  overflow: visible !important;
+}
+
+header.home-header .logo .brand-wordmark-main {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  padding-bottom: 2px;
+  background: linear-gradient(135deg, #f8fbff 0%, #b8dcff 22%, #7dd3fc 48%, #4f8eff 75%, #dbeafe 100%);
+  background-size: 160% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 8px 30px rgba(56, 189, 248, 0.18);
+  transition: background-position 0.35s ease, filter 0.35s ease;
+  overflow: visible !important;
+}
+
+header.home-header .logo:hover .brand-wordmark-main {
+  background-position: right center;
+  filter: drop-shadow(0 6px 18px rgba(96, 165, 250, 0.24));
+}
+
+@media (max-width: 1024px) {
+  header.home-header .logo .brand-logo {
+    gap: 12px;
+  }
+
+  header.home-header .logo .brand-mark {
+    width: 46px;
+    height: 46px;
+  }
+
+  header.home-header .logo .brand-wordmark-main {
+    font-size: 18px;
+    letter-spacing: 0.06em;
+  }
+}
+
+@media (max-width: 480px) {
+  header.home-header .logo .brand-logo {
+    gap: 9px;
+  }
+
+  header.home-header .logo .brand-mark {
+    width: 40px;
+    height: 40px;
+  }
+
+  header.home-header .logo .brand-wordmark-main {
+    font-size: 15px;
+    letter-spacing: 0.04em;
+  }
 }
 
 /* 导航菜单 - 居中布局 + 间距优化 */
 header.home-header .nav-menu {
-  gap: 8px !important;
+  gap: 4px !important;
   margin-left: auto !important;
   margin-right: auto !important;
+  flex-shrink: 1 !important;
+  min-width: 0 !important;
 }
 
 /* Material Design 导航链接 - 深色适配 */
@@ -379,12 +466,14 @@ header.home-header .nav-menu .dropdown-link {
   -webkit-text-fill-color: rgba(255, 255, 255, 0.85) !important;
   font-size: 14px !important;
   font-weight: 500 !important;
-  padding: 8px 18px !important;
+  padding: 8px 14px !important;
   border-radius: 100px !important;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
   text-decoration: none !important;
   position: relative;
   overflow: hidden;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
 }
 
 header.home-header .nav-menu a:hover,
@@ -522,7 +611,7 @@ header.home-header .login-btn {
   -webkit-text-fill-color: #ffffff !important;
   border: none !important;
   border-radius: 100px !important;
-  padding: 10px 26px !important;
+  padding: 10px 22px !important;
   font-size: 14px !important;
   font-weight: 600 !important;
   box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3), inset 0 1px 0 rgba(255,255,255,0.2) !important;
@@ -530,6 +619,8 @@ header.home-header .login-btn {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
   position: relative;
   overflow: hidden;
+  flex-shrink: 0 !important;
+  white-space: nowrap !important;
 }
 
 header.home-header .login-btn::before {
@@ -553,11 +644,12 @@ header.home-header .login-btn:hover::before {
   left: 100%;
 }
 
-/* 语言切换器位置 - 固定在登录按钮左侧 20px */
+/* 语言切换器位置 - 固定在登录按钮左侧 */
 header.home-header .lang-switcher {
-  margin-right: 20px !important;
+  margin-right: 12px !important;
   margin-left: 0 !important;
   border-left-color: rgba(255, 255, 255, 0.1) !important;
+  flex-shrink: 0 !important;
 }
 
 /* 语言切换器 - 深色 Header 适配 */
@@ -1241,6 +1333,78 @@ footer {
   background: linear-gradient(135deg, #4F8EFF 0%, #2563eb 100%) !important;
 }
 
+/* ── 微信图标 hover 二维码悬浮卡片 ── */
+.wechat-icon-wrapper {
+  position: relative !important;
+  overflow: visible !important;
+}
+
+.wechat-qr-tooltip {
+  position: absolute;
+  bottom: calc(100% + 14px);
+  left: 50%;
+  transform: translateX(-50%) translateY(8px);
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.08);
+  padding: 16px 16px 12px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s ease;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.wechat-icon-wrapper:hover .wechat-qr-tooltip {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+
+.wechat-qr-tooltip img {
+  width: 240px !important;
+  height: 240px !important;
+  min-width: 240px !important;
+  max-width: none !important;
+  border-radius: 12px;
+  object-fit: contain;
+  display: block;
+}
+
+.wechat-qr-label {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* 底部小三角箭头 */
+.wechat-qr-arrow {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  box-shadow: 3px 3px 6px rgba(0, 0, 0, 0.06);
+}
+
+/* 手机端隐藏 hover 二维码（保留点击弹窗） */
+@media (max-width: 768px) {
+  .wechat-qr-tooltip {
+    display: none !important;
+  }
+}
+
 /* ── 微信弹窗响应式 ── */
 .wechat-modal {
   animation: wechatModalIn 0.3s ease forwards;
@@ -1343,13 +1507,14 @@ footer {
 
 /* ── 移动端侧边抽屉菜单 ── */
 .mobile-nav-drawer {
+  display: none;
   position: fixed;
   top: 0;
   right: -100%;
   width: 300px;
   max-width: 85vw;
   height: 100vh;
-  background: rgba(15, 23, 42, 0.98) !important;
+  background: rgba(255, 255, 255, 0.92);
   z-index: 10001;
   padding: 90px 24px 40px;
   transition: right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
@@ -1359,27 +1524,20 @@ footer {
   backdrop-filter: blur(24px) saturate(1.4);
   -webkit-backdrop-filter: blur(24px) saturate(1.4);
 }
-
-/* Force dark background with higher specificity */
-body .mobile-nav-drawer,
-div.mobile-nav-drawer {
-  background: rgba(15, 23, 42, 0.98) !important;
-}
 .mobile-nav-drawer.open {
   right: 0;
 }
 .mobile-nav-overlay {
+  display: none;
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.25);
   z-index: 10000;
   opacity: 0;
-  visibility: hidden;
   transition: opacity 0.3s ease;
 }
 .mobile-nav-overlay.open {
   opacity: 1;
-  visibility: visible;
 }
 
 .mobile-nav-drawer a,
@@ -1388,7 +1546,7 @@ div.mobile-nav-drawer {
   align-items: center;
   gap: 12px;
   padding: 14px 16px;
-  color: #fff !important;
+  color: #1e293b;
   font-size: 15px;
   font-weight: 500;
   text-decoration: none;
@@ -1440,7 +1598,7 @@ div.mobile-nav-drawer {
   align-items: center;
   gap: 12px;
   padding: 14px 16px;
-  color: #fff !important;
+  color: #1e293b;
   font-size: 15px;
   font-weight: 500;
   border-radius: 12px;
@@ -1467,7 +1625,7 @@ div.mobile-nav-drawer {
 }
 .mobile-nav-drawer .drawer-section-arrow {
   font-size: 18px;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(0, 0, 0, 0.3);
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
 }
@@ -1499,7 +1657,7 @@ div.mobile-nav-drawer {
   border-radius: 10px !important;
   text-decoration: none !important;
   transition: all 0.2s ease !important;
-  color: rgba(255, 255, 255, 0.8) !important;
+  color: #475569 !important;
 }
 .mobile-nav-drawer .drawer-sub-link:hover {
   background: rgba(79, 142, 255, 0.08) !important;
@@ -1537,6 +1695,31 @@ div.mobile-nav-drawer {
   flex-shrink: 0;
 }
 
+/* ── 中等桌面端（≤1280px）- 导航间距收紧防止遮挡 ── */
+@media (max-width: 1280px) {
+  header.home-header {
+    padding: 10px 18px !important;
+  }
+  header.home-header .header-content {
+    gap: 8px !important;
+  }
+  header.home-header .nav-menu {
+    gap: 2px !important;
+  }
+  header.home-header .nav-menu a,
+  header.home-header .nav-menu .dropdown-link {
+    padding: 8px 12px !important;
+    font-size: 13px !important;
+  }
+  header.home-header .login-btn {
+    padding: 9px 18px !important;
+    font-size: 13px !important;
+  }
+  header.home-header .lang-switcher {
+    margin-right: 8px !important;
+  }
+}
+
 /* ── Tablet（≤1024px） ── */
 @media (max-width: 1024px) {
   /* 平板端 header-content 去掉 padding + 垂直对齐 */
@@ -1548,12 +1731,19 @@ div.mobile-nav-drawer {
 
   /* 平板端导航菜单 - 缩小间距和 padding 适配 6 个菜单项 */
   header.home-header .nav-menu {
-    gap: 4px !important;
+    gap: 2px !important;
   }
   header.home-header .nav-menu a,
   header.home-header .nav-menu .dropdown-link {
-    padding: 6px 10px !important;
-    font-size: 13px !important;
+    padding: 6px 8px !important;
+    font-size: 12px !important;
+  }
+  header.home-header .login-btn {
+    padding: 8px 16px !important;
+    font-size: 12px !important;
+  }
+  header.home-header .lang-switcher {
+    margin-right: 6px !important;
   }
 
   .hero-section h1,
@@ -1653,11 +1843,9 @@ div.mobile-nav-drawer {
 
 
   header.home-header .logo {
-    font-size: 18px !important;
-    letter-spacing: -0.2px !important;
     flex-shrink: 0;
     /* 给左上角固定的汉堡按钮留出空间 */
-    margin-left: 40px !important;
+    margin-left: 44px !important;
   }
   
   /* 汉堡按钮：缩小尺寸，固定在左上角 */
@@ -1693,6 +1881,13 @@ div.mobile-nav-drawer {
   }
   .mobile-menu-btn {
     display: flex !important;
+  }
+  .mobile-nav-drawer {
+    display: block;
+  }
+  .mobile-nav-overlay {
+    display: block;
+    pointer-events: none;
   }
   .mobile-nav-overlay.open {
     pointer-events: auto;
@@ -2088,7 +2283,6 @@ div.mobile-nav-drawer {
   }
   
   header.home-header .logo {
-    font-size: 16px !important;
     margin-left: 40px !important;
   }
 
@@ -3444,9 +3638,9 @@ html {
     margin-left: auto;
     padding: 7px 14px 7px 8px;
     font-size: 0;            /* 子元素单独控制 */
-    color: #ffffff;
-    background: linear-gradient(135deg, #1a73e8 0%, #1558b7 100%);
-    border: none;
+    color: #333333;
+    background: transparent;
+    border: 1px solid #d0d0d0;
     border-radius: 22px;
     cursor: pointer;
     transition: all 0.25s ease;
@@ -3458,35 +3652,32 @@ html {
     overflow: hidden;
   }
   .help-center-page .hc-back-home-btn::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 60%);
-    pointer-events: none;
+    display: none;
   }
   .help-center-page .hc-back-home-btn span {
     font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.3px;
+    color: #333333;
   }
   .help-center-page .hc-back-home-btn svg {
     flex-shrink: 0;
-    stroke: #ffffff;
-    color: #ffffff;
+    stroke: #333333;
+    color: #333333;
     position: relative;
   }
   .help-center-page .hc-back-home-btn .hc-home-icon {
-    fill: #ffffff;
+    fill: #333333;
     stroke: none;
   }
   .help-center-page .hc-back-home-btn:hover {
-    background: linear-gradient(135deg, #1e7ef0 0%, #1a6cdb 100%);
-    box-shadow: 0 4px 14px rgba(26, 115, 232, 0.5);
+    background: #f1f3f4;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     transform: translateY(-1px);
   }
   .help-center-page .hc-back-home-btn:active {
     transform: scale(0.96) translateY(0);
-    box-shadow: 0 1px 4px rgba(26, 115, 232, 0.3);
+    background: #e8eaed;
   }
 }
 @media (max-width: 480px) {
@@ -5082,4 +5273,19 @@ header.home-header .dropdown .products-dropdown-menu .menu-text .menu-desc {
   font-weight: 400;
   color: rgba(255, 255, 255, 0.45);
   -webkit-text-fill-color: rgba(255, 255, 255, 0.45);
+}
+
+/* 甯姪涓績娣辫壊鍝佺墝瀛楅€傞厤 */
+.help-center-page header.home-header .logo .brand-wordmark-main {
+  background: linear-gradient(135deg, #1e40af 0%, #2563eb 50%, #3b82f6 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+  text-shadow: none !important;
+}
+.help-center-page header.home-header .logo:hover .brand-wordmark-main {
+  filter: drop-shadow(0 4px 12px rgba(37, 99, 235, 0.2)) !important;
+}
+.help-center-page header.home-header .logo .brand-wordmark::after {
+  background: linear-gradient(90deg, rgba(37, 99, 235, 0.05), rgba(37, 99, 235, 0.4), rgba(37, 99, 235, 0.05)) !important;
 }

@@ -616,15 +616,69 @@ export const orderService = {
   },
 
   /**
+   * 计算订单的统一前端状态
+   * 根据后端的 order_status、deployment_status、pay_status 综合判断
+   * @param {Object} order - 订单对象
+   * @param {string} order.order_status - 订单状态
+   * @param {string} order.deployment_status - 部署状态
+   * @param {string} order.pay_status - 支付状态
+   * @returns {string} 前端统一状态
+   */
+  computeOrderStatus(order) {
+    const { order_status, deployment_status, pay_status } = order;
+
+    // 优先级 1: 已取消/已关闭/已过期
+    if (order_status === 'cancelled' || order_status === 'closed') {
+      return 'cancelled';
+    }
+    if (order_status === 'expired') {
+      return 'expired';
+    }
+
+    // 优先级 2: 部署失败
+    if (order_status === 'failed' || deployment_status === 'failed') {
+      return 'failed';
+    }
+
+    // 优先级 3: 未支付
+    if (pay_status !== 'paid') {
+      return 'pending';
+    }
+
+    // 优先级 4: 部署中（包含资源分配和等待 Agent 两个阶段）
+    if (deployment_status === 'deploying' || order_status === 'deploying') {
+      return 'deploying';
+    }
+
+    // 优先级 5: 正常运行（Agent 已确认部署成功）
+    if (deployment_status === 'deployed' && order_status === 'normal') {
+      return 'active';
+    }
+
+    // 默认: 根据支付状态判断
+    return pay_status === 'paid' ? 'deploying' : 'pending';
+  },
+
+  /**
+   * 检查订单是否可以提取代理
+   * @param {string} status - 前端统一状态
+   * @returns {boolean} 是否可提取
+   */
+  canExtractProxies(status) {
+    return status === 'active';
+  },
+
+  /**
    * 格式化订单状态显示
-   * @param {string} status - 订单状态
+   * @param {string} status - 订单状态（前端统一状态）
    * @returns {string} 中文状态
    */
   formatOrderStatus(status) {
     const statusMap = {
       'pending': '待支付',
-      'paid': '已支付',
-      'active': '生效中',
+      'deploying': '部署中',
+      'active': '正常运行',
+      'failed': '部署失败',
       'expired': '已过期',
       'cancelled': '已取消',
       'refunded': '已退款',
@@ -634,19 +688,37 @@ export const orderService = {
 
   /**
    * 获取订单状态颜色
-   * @param {string} status - 订单状态
+   * @param {string} status - 订单状态（前端统一状态）
    * @returns {string} Tailwind CSS 类名
    */
   getOrderStatusColor(status) {
     const colorMap = {
-      'pending': 'text-yellow-600 bg-yellow-50',
-      'paid': 'text-blue-600 bg-blue-50',
-      'active': 'text-green-600 bg-green-50',
-      'expired': 'text-gray-600 bg-gray-50',
-      'cancelled': 'text-red-600 bg-red-50',
-      'refunded': 'text-purple-600 bg-purple-50',
+      'pending': 'text-yellow-600 bg-yellow-50 border-yellow-200',
+      'deploying': 'text-indigo-600 bg-indigo-50 border-indigo-200',
+      'active': 'text-green-600 bg-green-50 border-green-200',
+      'failed': 'text-red-600 bg-red-50 border-red-200',
+      'expired': 'text-gray-600 bg-gray-50 border-gray-200',
+      'cancelled': 'text-gray-500 bg-gray-50 border-gray-200',
+      'refunded': 'text-purple-600 bg-purple-50 border-purple-200',
     };
-    return colorMap[status] || 'text-gray-600 bg-gray-50';
+    return colorMap[status] || 'text-gray-600 bg-gray-50 border-gray-200';
+  },
+
+  /**
+   * 获取订单状态图标
+   * @param {string} status - 订单状态（前端统一状态）
+   * @returns {Object} { icon: Component, animate: boolean }
+   */
+  getOrderStatusIcon(status) {
+    const iconMap = {
+      'pending': { icon: 'Clock', animate: false },
+      'deploying': { icon: 'RefreshCw', animate: true },
+      'active': { icon: 'CheckCircle', animate: false },
+      'failed': { icon: 'XCircle', animate: false },
+      'expired': { icon: 'Clock', animate: false },
+      'cancelled': { icon: 'XCircle', animate: false },
+    };
+    return iconMap[status] || { icon: 'HelpCircle', animate: false };
   },
 
   /**

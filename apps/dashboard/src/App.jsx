@@ -337,15 +337,37 @@ const PURCHASE_OPTIONS = {
 
 // --- 2. Basic Components ---
 
-const StatusBadge = ({ status }) => (
-  <span className={`px-2 py-0.5 rounded text-xs font-medium border flex items-center gap-1.5 w-fit ${
-    status === 'active' || status === 'online' ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
-    "bg-gray-50 text-gray-500 border-gray-200"
-  }`}>
-    {(status === 'active' || status === 'online') && <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
-    {status === 'active' || status === 'online' ? '正常运行' : status}
-  </span>
-);
+const StatusBadge = ({ status }) => {
+  // 使用 orderService 的状态映射
+  const displayStatus = orderService.formatOrderStatus(status);
+  const colorClass = orderService.getOrderStatusColor(status);
+  const iconInfo = orderService.getOrderStatusIcon(status);
+
+  // 根据状态获取图标组件
+  const getStatusIcon = () => {
+    switch (iconInfo.icon) {
+      case 'Clock':
+        return <Clock className={`w-3 h-3 ${iconInfo.animate ? 'animate-spin' : ''}`} />;
+      case 'RefreshCw':
+        return <RefreshCw className={`w-3 h-3 ${iconInfo.animate ? 'animate-spin' : ''}`} />;
+      case 'CheckCircle':
+        return <CheckCircle className="w-3 h-3" />;
+      case 'XCircle':
+        return <XCircle className="w-3 h-3" />;
+      case 'AlertTriangle':
+        return <AlertTriangle className="w-3 h-3" />;
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <span className={`px-2 py-0.5 rounded text-xs font-medium border flex items-center gap-1.5 w-fit ${colorClass}`}>
+      {getStatusIcon()}
+      {displayStatus}
+    </span>
+  );
+};
 
 const TicketStatusBadge = ({ status, label }) => {
   const styles = {
@@ -479,6 +501,42 @@ const YamlConfigModal = ({ config, onClose }) => {
           >
             关闭
           </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ProxyDeployingModal = ({ isOpen, onClose }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="p-8 flex flex-col items-center justify-center">
+          {/* Loading Spinner */}
+          <div className="relative mb-6">
+            <div className="w-16 h-16 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin"></div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Server className="w-6 h-6 text-blue-600" />
+            </div>
+          </div>
+
+          {/* Message */}
+          <h3 className="text-xl font-bold text-gray-900 mb-2">代理正在部署中</h3>
+          <p className="text-gray-500 text-center text-sm">
+            系统正在为您配置代理节点，请稍候...
+          </p>
+
+          {/* Progress Bar Animation */}
+          <div className="w-full mt-6 bg-gray-100 rounded-full h-2 overflow-hidden">
+            <div className="bg-blue-600 h-2 rounded-full animate-pulse" style={{ width: '60%' }}></div>
+          </div>
+
+          {/* Tip */}
+          <p className="text-gray-400 text-xs mt-4">
+            提示：您可以稍后再试，或联系客服获取帮助
+          </p>
         </div>
       </div>
     </div>
@@ -1932,7 +1990,8 @@ const OrderListView = ({ onSelectOrder, onExportAll, onNavigateToSupport }) => {
                 orderNo: order.order_no || order.order_id || order.id,
                 typeLabel: order.product_name || order.template_name || '静态住宅 ISP',
                 region: order.country || 'US',
-                status: order.pay_status === 'paid' ? 'active' : (order.order_status || 'pending'),
+                // 使用状态映射函数计算统一的前端状态
+                status: orderService.computeOrderStatus(order),
                 createdAt: order.created_at || order.create_time || order.purchase_time,
                 amount: order.amount || 0,
                 bandwidth: bandwidth,
@@ -2294,9 +2353,19 @@ const IPResourceManager = () => {
   }, []);
 
   const handleExportGroup = (group) => {
+    // 检查组内是否有可提取代理的订单
+    const hasExtractableOrders = group.orders.some(order => orderService.canExtractProxies(order.status));
+    if (!hasExtractableOrders) {
+      alert('该资源包中没有可提取的订单（所有订单状态均未达到「正常运行」）');
+      return;
+    }
     const allProxies = group.orders.flatMap(order => generateProxyList(order.totalIps, order.region));
     setCurrentGroupProxies(allProxies);
     setIsExportOpen(true);
+  };
+
+  const canExtractGroup = (group) => {
+    return group.orders.some(order => orderService.canExtractProxies(order.status));
   };
 
   return (
@@ -2320,7 +2389,18 @@ const IPResourceManager = () => {
                   <div className="text-3xl font-bold text-gray-900 mb-1">{group.totalIps} <span className="text-sm font-medium text-gray-400">IPs</span></div>
                   <div className="flex gap-2 w-full mt-2">
                      <button onClick={() => setExpandedGroups(prev => ({ ...prev, [group.id]: !prev[group.id] }))} className="flex-1 py-2 text-xs font-medium text-gray-600 border border-gray-200 rounded hover:bg-gray-50 transition-colors">{expandedGroups[group.id] ? '收起明细' : '查看明细'}</button>
-                     <button onClick={() => handleExportGroup(group)} className="flex-1 py-2 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors shadow-sm flex items-center justify-center gap-1"><Zap className="w-3 h-3" /> 批量提取</button>
+                     <button
+                        onClick={() => handleExportGroup(group)}
+                        disabled={!canExtractGroup(group)}
+                        className={`flex-1 py-2 text-xs font-medium rounded transition-colors shadow-sm flex items-center justify-center gap-1 ${
+                          canExtractGroup(group)
+                            ? 'text-white bg-blue-600 hover:bg-blue-700'
+                            : 'text-gray-400 bg-gray-200 cursor-not-allowed'
+                        }`}
+                        title={!canExtractGroup(group) ? '该资源包中没有可提取的订单' : ''}
+                     >
+                        <Zap className="w-3 h-3" /> 批量提取
+                     </button>
                   </div>
                </div>
             </div>
@@ -2461,7 +2541,16 @@ const OrderDetailView = ({ order, onBack, onExportOrder, onNavigateToSupport, on
                          </div>
                      </div>
                      <div className="flex gap-3 w-full md:w-auto">
-                        <button onClick={onExportOrder} className="flex-1 md:flex-none px-5 py-2.5 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 shadow-lg shadow-blue-200 flex items-center justify-center gap-2 transition-all">
+                        <button
+                            onClick={onExportOrder}
+                            disabled={!orderService.canExtractProxies(currentOrder.status)}
+                            className={`flex-1 md:flex-none px-5 py-2.5 text-sm font-bold rounded-lg flex items-center justify-center gap-2 transition-all ${
+                                orderService.canExtractProxies(currentOrder.status)
+                                    ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200'
+                                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            }`}
+                            title={!orderService.canExtractProxies(currentOrder.status) ? `当前状态为「${orderService.formatOrderStatus(currentOrder.status)}」，无法提取代理` : ''}
+                        >
                              <Zap className="w-4 h-4"/> 批量提取代理
                         </button>
                         <button onClick={() => onNavigateToSupport(order.id)} className="flex-1 md:flex-none px-5 py-2.5 bg-white border border-gray-200 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2 transition-all">
@@ -4028,96 +4117,104 @@ const App = () => {
       // 标记已处理，避免重复处理
       setProcessedOrderId(orderIdParam);
 
-      // 检查是否已经在订单列表中（支持数字 ID 和 DD- 开头的 ID）
-      const existingOrder = ordersList.find(o =>
-        o.id === orderIdParam ||
-        o.order_id === orderIdParam ||
-        o.numericId === orderIdParam ||
-        String(o.numericId) === orderIdParam ||
-        String(o.id) === orderIdParam
-      );
-      if (existingOrder) {
-        console.log('[Dashboard] Order found in local list:', existingOrder);
-        setSelectedOrder(existingOrder);
-        return;
-      }
+      // 直接从服务器获取订单详情，确保获取最新状态
+      // 这对于支付完成后跳转到订单详情页的场景特别重要
+      const loadOrderDetail = async () => {
+        try {
+          console.log('[Dashboard] Loading order detail from server:', orderIdParam);
+          const result = await orderService.getOrderDetail(orderIdParam);
+          if (result.success && result.data) {
+            const order = result.data;
+            console.log('[Dashboard] Order detail loaded:', order);
 
-      // 如果订单列表为空，则加载订单列表
-      if (!isLoadingOrders && ordersList.length === 0) {
-        console.log('[Dashboard] Loading orders list to find order:', orderIdParam);
-        setIsLoadingOrders(true);
-
-        const loadOrdersAndSelect = async () => {
-          try {
-            const result = await orderService.getOrders({ page: 1, pageSize: 100 });
-            if (result.success) {
-              const orderList = result.data?.list || result.data || [];
-              console.log('[Dashboard] Orders loaded:', orderList.length);
-
-              // 转换订单数据格式（与 OrderListView 中的转换逻辑一致）
-              const mappedOrders = orderList.map(order => {
-                let bandwidth = '不限';
-                let traffic = '不限';
-                if (order.bandwidth_traffic) {
-                  const [bwType, bwValue] = order.bandwidth_traffic.split('/');
-                  if (bwType === 'bandwidth') bandwidth = bwValue === 'unlimited' ? '不限' : `${bwValue}Mbps`;
-                  else if (bwType === 'traffic') traffic = bwValue === 'unlimited' ? '不限' : `${bwValue}`;
-                }
-                const expireDate = order.expire_time ? new Date(order.expire_time) : null;
-
-                return {
-                  // 保存原始数字 ID 和 order_id，确保可以通过任一格式查找
-                  id: order.id || order.order_id,
-                  order_id: order.order_id || order.id,
-                  // 保存数字 ID（用于余额支付跳转）
-                  numericId: order.id,
-                  orderNo: order.order_no || order.order_id || order.id,
-                  typeLabel: order.template_name || order.resource_type || '静态住宅代理',
-                  region: order.country || order.region || 'Unknown',
-                  status: order.pay_status === 'paid' ? 'active' : (order.order_status || 'pending'),
-                  createdAt: order.created_at || order.create_time || order.purchase_time,
-                  amount: order.amount || 0,
-                  bandwidth: bandwidth,
-                  traffic: traffic,
-                  expireDate: expireDate,
-                  totalIps: order.quantity || order.ip_quantity || 0,
-                  protocol: order.protocol || 'HTTP',
-                  // 订阅/自动续费信息
-                  autoRenewEnabled: order.auto_renew_enabled || false,
-                  renewDurationDays: order.renew_duration_days || 30,
-                  nextRenewAt: order.next_renew_at ? new Date(order.next_renew_at) : null,
-                  subscriptionId: order.subscription_id || '',
-                  lastRenewedAt: order.last_renewed_at ? new Date(order.last_renewed_at) : null,
-                };
-              });
-
-              setOrdersList(mappedOrders);
-
-              // 查找对应的订单（支持数字 ID 和 DD- 开头的 ID）
-              const targetOrder = mappedOrders.find(o =>
-                o.id === orderIdParam ||
-                o.order_id === orderIdParam ||
-                o.numericId === orderIdParam ||
-                String(o.numericId) === orderIdParam ||
-                String(o.id) === orderIdParam
-              );
-              if (targetOrder) {
-                console.log('[Dashboard] Found target order:', targetOrder);
-                setSelectedOrder(targetOrder);
-              } else {
-                console.warn('[Dashboard] Order not found in loaded list:', orderIdParam);
-                console.log('[Dashboard] Available orders:', mappedOrders.map(o => ({ id: o.id, order_id: o.order_id, numericId: o.numericId })));
-              }
+            // 转换为前端统一格式（与 OrderListView 中的转换逻辑一致）
+            let bandwidth = '不限';
+            let traffic = '不限';
+            if (order.bandwidth_traffic) {
+              const [bwType, bwValue] = order.bandwidth_traffic.split('/');
+              if (bwType === 'bandwidth') bandwidth = bwValue === 'unlimited' ? '不限' : `${bwValue}Mbps`;
+              else if (bwType === 'traffic') traffic = bwValue === 'unlimited' ? '不限' : `${bwValue}`;
             }
-          } catch (error) {
-            console.error('[Dashboard] Error loading orders:', error);
-          } finally {
-            setIsLoadingOrders(false);
-          }
-        };
+            const expireDate = order.expire_time ? new Date(order.expire_time) : null;
 
-        loadOrdersAndSelect();
-      }
+            // 计算前端统一状态
+            const frontendStatus = orderService.computeOrderStatus(order);
+
+            const mappedOrder = {
+              // 保存原始数据
+              _raw: order,
+              // 保存原始数字 ID 和 order_id，确保可以通过任一格式查找
+              id: order.id || order.order_id,
+              order_id: order.order_id || order.id,
+              // 保存数字 ID（用于余额支付跳转）
+              numericId: order.id,
+              orderNo: order.order_no || order.order_id || order.id,
+              typeLabel: order.template_name || order.resource_type || '静态住宅代理',
+              region: order.country || order.region || 'Unknown',
+              // 使用计算后的前端状态
+              status: frontendStatus,
+              createdAt: order.created_at || order.create_time || order.purchase_time,
+              amount: order.amount || 0,
+              bandwidth: bandwidth,
+              traffic: traffic,
+              expireDate: expireDate,
+              totalIps: order.quantity || order.ip_quantity || 0,
+              protocol: order.protocol || 'HTTP',
+              // 订阅/自动续费信息
+              autoRenewEnabled: order.auto_renew_enabled || false,
+              renewDurationDays: order.renew_duration_days || 30,
+              nextRenewAt: order.next_renew_at ? new Date(order.next_renew_at) : null,
+              subscriptionId: order.subscription_id || '',
+              lastRenewedAt: order.last_renewed_at ? new Date(order.last_renewed_at) : null,
+            };
+
+            console.log('[Dashboard] Setting selected order with status:', frontendStatus);
+            setSelectedOrder(mappedOrder);
+
+            // 更新 ordersList 中的对应订单（如果存在）
+            setOrdersList(prev => prev.map(o => {
+              if (o.id === orderIdParam ||
+                  o.order_id === orderIdParam ||
+                  o.numericId === orderIdParam ||
+                  String(o.numericId) === orderIdParam ||
+                  String(o.id) === orderIdParam) {
+                return mappedOrder;
+              }
+              return o;
+            }));
+          } else {
+            console.warn('[Dashboard] Failed to load order detail:', result.message);
+            // 如果加载详情失败，尝试从 ordersList 中查找
+            const existingOrder = ordersList.find(o =>
+              o.id === orderIdParam ||
+              o.order_id === orderIdParam ||
+              o.numericId === orderIdParam ||
+              String(o.numericId) === orderIdParam ||
+              String(o.id) === orderIdParam
+            );
+            if (existingOrder) {
+              console.log('[Dashboard] Fallback to order from local list:', existingOrder);
+              setSelectedOrder(existingOrder);
+            }
+          }
+        } catch (error) {
+          console.error('[Dashboard] Error loading order detail:', error);
+          // 如果加载详情失败，尝试从 ordersList 中查找
+          const existingOrder = ordersList.find(o =>
+            o.id === orderIdParam ||
+            o.order_id === orderIdParam ||
+            o.numericId === orderIdParam ||
+            String(o.numericId) === orderIdParam ||
+            String(o.id) === orderIdParam
+          );
+          if (existingOrder) {
+            console.log('[Dashboard] Fallback to order from local list:', existingOrder);
+            setSelectedOrder(existingOrder);
+          }
+        }
+      };
+
+      loadOrderDetail();
     }
   }, [processedOrderId]);
   const [wizardClient, setWizardClient] = useState(null);
@@ -4176,6 +4273,8 @@ const App = () => {
   // State for Export Modal
   const [isProxyExportModalOpen, setIsProxyExportModalOpen] = useState(false);
   const [exportProxies, setExportProxies] = useState([]);
+  const [isProxyDeploying, setIsProxyDeploying] = useState(false);
+  const [deployingOrderId, setDeployingOrderId] = useState(null);
 
   const [expandedMenus, setExpandedMenus] = useState(['purchase']);
 
@@ -4240,8 +4339,9 @@ const App = () => {
          const proxyNodes = result.data.proxy_nodes;
 
          if (proxyNodes.length === 0) {
-           // 没有可用代理节点
-           alert('该订单暂无可用的代理节点，请确认订单状态');
+           // 没有可用代理节点，显示部署中提示
+           setDeployingOrderId(order.id);
+           setIsProxyDeploying(true);
            return;
          }
 
@@ -4401,6 +4501,11 @@ const App = () => {
           setExportProxies([]); // Clear state to prevent accumulation
         }}
         selectedProxies={exportProxies}
+      />
+
+      <ProxyDeployingModal
+        isOpen={isProxyDeploying}
+        onClose={() => setIsProxyDeploying(false)}
       />
 
       <aside className={`w-64 flex-col hidden md:flex sticky top-0 h-screen overflow-y-auto z-40 transition-all duration-300 ${isDashboard ? 'bg-slate-900/80 backdrop-blur-xl border-r border-slate-800' : 'bg-white border-r border-gray-200'}`}>

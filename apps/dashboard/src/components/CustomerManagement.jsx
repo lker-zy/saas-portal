@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { customerService } from '../services/customerService';
+import { usePermissions } from '../hooks/usePermissions';
 import {
   Users,
   Search,
@@ -19,14 +20,17 @@ import {
   Eye,
   MoreVertical,
   DollarSign,
+  Lock,
 } from 'lucide-react';
 
 /**
  * 客户管理组件
  * 平台管理员管理终端用户
+ * 管理员有完整操作权限，非管理员只有只读权限
  */
 const CustomerManagement = () => {
   const { t } = useTranslation();
+  const { isAdmin } = usePermissions();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -132,6 +136,10 @@ const CustomerManagement = () => {
    * 打开编辑对话框
    */
   const handleOpenEdit = (customer) => {
+    if (!isAdmin) {
+      showMessage('需要管理员权限才能编辑客户信息', 'error');
+      return;
+    }
     setSelectedCustomer(customer);
     setEditForm({
       nickname: customer.nickname || '',
@@ -183,6 +191,10 @@ const CustomerManagement = () => {
    * 打开余额调整对话框
    */
   const handleOpenBalance = (customer) => {
+    if (!isAdmin) {
+      showMessage('需要管理员权限才能调整余额', 'error');
+      return;
+    }
     setSelectedCustomer(customer);
     setBalanceForm({
       amount: '',
@@ -256,8 +268,18 @@ const CustomerManagement = () => {
 
       {/* 头部 */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">客户管理</h1>
-        <p className="text-gray-600">管理平台注册用户、余额和账户状态</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">客户管理</h1>
+            <p className="text-gray-600">管理平台注册用户、余额和账户状态</p>
+          </div>
+          {!isAdmin && (
+            <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-lg">
+              <Lock className="w-4 h-4 text-amber-600" />
+              <span className="text-sm text-amber-800">只读模式 - 仅管理员可操作</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* 工具栏 */}
@@ -372,20 +394,32 @@ const CustomerManagement = () => {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
-                          <button
-                            onClick={() => handleOpenEdit(customer)}
-                            className="p-1 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded"
-                            title="编辑"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleOpenBalance(customer)}
-                            className="p-1 text-green-600 hover:text-green-800 hover:bg-green-50 rounded"
-                            title="调整余额"
-                          >
-                            <Wallet className="w-4 h-4" />
-                          </button>
+                          {isAdmin ? (
+                            <>
+                              <button
+                                onClick={() => handleOpenEdit(customer)}
+                                className="p-1 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded"
+                                title="编辑"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleOpenBalance(customer)}
+                                className="p-1 text-green-600 hover:text-green-800 hover:bg-green-50 rounded"
+                                title="调整余额"
+                              >
+                                <Wallet className="w-4 h-4" />
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              disabled
+                              className="p-1 text-gray-400 cursor-not-allowed rounded"
+                              title="需要管理员权限"
+                            >
+                              <Lock className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

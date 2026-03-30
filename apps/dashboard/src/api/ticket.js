@@ -26,8 +26,10 @@ export const ticketAPI = {
    * @param {Object} filters - 查询条件
    * @returns {Promise} { total, data }
    */
-  getTickets: (filters) =>
-    axios.get('/ticket/tickets', { params: filters }),
+  getTickets: (filters = {}) => {
+    // 用户端(客户端)不携带role参数，后端默认返回当前用户的工单
+    return axios.get('/ticket/tickets', { params: filters });
+  },
 
   /**
    * 获取工单详情
@@ -44,7 +46,7 @@ export const ticketAPI = {
    * @returns {Promise}
    */
   updateTicketStatus: (ticketId, status) =>
-    axios.put(`/ticket/tickets/${ticketId}/status`, { status }),
+    axios.put(`/ticket/tickets`, { id: ticketId, status }),
 
   /**
    * 获取工单消息列表
@@ -63,6 +65,39 @@ export const ticketAPI = {
    */
   sendMessage: (ticketId, content, type = 'user') =>
     axios.post(`/ticket/tickets/${ticketId}/messages`, { content, type }),
+
+  /**
+   * 更新工单
+   * @param {number|string} id - 工单ID
+   * @param {object} data - 更新数据
+   * @returns {Promise}
+   */
+  updateTicket: (id, data) =>
+    axios.put(`/ticket/tickets`, { id: typeof id === 'string' ? parseInt(id) : id, ...data }),
+
+  /**
+   * 删除工单
+   * @param {number} ticketId - 工单ID
+   * @returns {Promise}
+   */
+  deleteTicket: (ticketId) =>
+    axios.delete(`/ticket/tickets/${ticketId}`),
+
+  /**
+   * 关闭工单
+   * @param {number} ticketId - 工单ID
+   * @returns {Promise}
+   */
+  closeTicket: (ticketId) =>
+    axios.post(`/ticket/tickets/${ticketId}/close`),
+
+  /**
+   * 重新打开工单
+   * @param {number} ticketId - 工单ID
+   * @returns {Promise}
+   */
+  reopenTicket: (ticketId) =>
+    axios.post(`/ticket/tickets/${ticketId}/reopen`),
 };
 
 export default ticketAPI;

@@ -2,9 +2,27 @@ import { ticketAPI } from '../api/ticket';
 import { userService } from './userService';
 
 /**
+ * 确保ID为number类型（后端API期望number类型）
+ * @param {string|number} id - 工单ID
+ * @returns {number} 数字类型的工单ID
+ */
+const normalizeId = (id) => {
+  if (typeof id === 'string') {
+    const parsed = parseInt(id, 10);
+    if (isNaN(parsed)) {
+      throw new Error(`Invalid ticket ID: ${id}`);
+    }
+    return parsed;
+  }
+  return id;
+};
+
+/**
  * 工单服务 (Dashboard 用户端)
  * 对接 ticket service (8894)
  * 用户提交工单功能
+ *
+ * 注意：此服务用于用户端，不携带role=admin参数
  */
 export const ticketService = {
   /**
@@ -214,6 +232,122 @@ export const ticketService = {
       'closed': '已关闭',
     };
     return statusMap[status] || status;
+  },
+
+  /**
+   * 更新工单
+   * @param {string|number} id - 工单ID
+   * @param {object} data - 更新数据
+   * @returns {Promise} { success, message, data }
+   */
+  async updateTicket(id, data = {}) {
+    try {
+      const result = await ticketAPI.updateTicket(normalizeId(id), data);
+      if (result && result.status === 'success') {
+        return {
+          success: true,
+          message: '工单更新成功',
+          data: result,
+        };
+      } else {
+        return {
+          success: false,
+          message: result?.message || '工单更新失败',
+        };
+      }
+    } catch (error) {
+      console.error('Update ticket service error:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || error.message || '工单更新失败，请稍后重试',
+      };
+    }
+  },
+
+  /**
+   * 删除工单
+   * @param {string|number} id - 工单ID
+   * @returns {Promise} { success, message }
+   */
+  async deleteTicket(id) {
+    try {
+      const result = await ticketAPI.deleteTicket(normalizeId(id));
+      if (result && result.status === 'success') {
+        return {
+          success: true,
+          message: '工单删除成功',
+        };
+      } else {
+        return {
+          success: false,
+          message: result?.message || '工单删除失败',
+        };
+      }
+    } catch (error) {
+      console.error('Delete ticket service error:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || error.message || '工单删除失败，请稍后重试',
+      };
+    }
+  },
+
+  /**
+   * 关闭工单
+   * @param {string|number} id - 工单ID
+   * @param {string} reason - 关闭原因
+   * @returns {Promise} { success, message }
+   */
+  async closeTicket(id, reason = '') {
+    try {
+      const result = await ticketAPI.closeTicket(normalizeId(id));
+      if (result && result.status === 'success') {
+        return {
+          success: true,
+          message: result.message || '工单已关闭',
+        };
+      } else {
+        return {
+          success: false,
+          message: result?.message || '工单关闭失败',
+        };
+      }
+    } catch (error) {
+      console.error('Close ticket service error:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || error.message || '工单关闭失败，请稍后重试',
+      };
+    }
+  },
+
+  /**
+   * 重新打开工单
+   * @param {string|number} id - 工单ID
+   * @param {string} reason - 重新打开原因
+   * @returns {Promise} { success, message }
+   */
+  async reopenTicket(id, reason = '') {
+    try {
+      const result = await ticketAPI.reopenTicket(normalizeId(id));
+      if (result && result.status === 'success') {
+        return {
+          success: true,
+          message: result.message || '工单已重新打开',
+        };
+      } else {
+        return {
+          success: false,
+          message: result?.message || '工单重新打开失败',
+        };
+      }
+    } catch (error) {
+      console.error('Reopen ticket service error:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || error.message || '工单重新打开失败，请稍后重试',
+      };
+    }
   },
 };
 

@@ -117,7 +117,22 @@ export const ticketService = {
    */
   async getMyTickets(filters = {}) {
     try {
-      const result = await ticketAPI.getTickets(filters);
+      // 获取用户信息
+      const user = userService.getLocalUser();
+      if (!user) {
+        return {
+          success: false,
+          message: '请先登录',
+        };
+      }
+
+      // 自动添加用户ID过滤条件，确保只返回当前用户的工单
+      const filtersWithUserId = {
+        ...filters,
+        userId: user.id || 0,
+      };
+
+      const result = await ticketAPI.getTickets(filtersWithUserId);
 
       // axios 响应拦截器已返回 response.data，所以 result 直接是 { total, data }
       if (result && result.total !== undefined) {

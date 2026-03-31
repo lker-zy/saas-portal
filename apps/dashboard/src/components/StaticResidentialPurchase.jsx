@@ -1010,9 +1010,9 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
     const durationDiscount = purchaseType === 'subscription'
       ? (selectedCycle?.discountRate ?? 1)
       : (selectedDuration?.discountRate ?? 1);
-    // 使用 productService 获取 SKU 价格
-    const skuPrice = productService.getSkuPrice(selectedSku);
-    return skuPrice * quantity * durationFactor * durationDiscount;
+    // 使用新的价格计算方法：包含协议加价
+    const unitPrice = productService.calculateUnitPrice(selectedSku, protocol);
+    return unitPrice * quantity * durationFactor * durationDiscount;
   };
 
   const totalUSDValue = calculateTotal();

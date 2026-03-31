@@ -768,6 +768,80 @@ export const productService = {
   },
 
   /**
+   * 计算单个协议的加价
+   * 与后端 calculateProtocolAmount 逻辑一致
+   * @param {number} basePrice - 基础价格
+   * @param {string} protocol - 协议名称
+   * @param {Object} protocolPricing - 协议定价信息 {protocol: {mode, value}}
+   * @returns {number} 协议加价
+   */
+  calculateProtocolPrice(basePrice, protocol, protocolPricing) {
+    if (!protocol || !protocolPricing) return 0;
+
+    // 协议名称不区分大小写
+    const normalizedProtocol = Object.keys(protocolPricing).find(
+      key => key.toLowerCase() === protocol.toLowerCase()
+    );
+
+    if (!normalizedProtocol) return 0;
+
+    const item = protocolPricing[normalizedProtocol];
+    if (!item) return 0;
+
+    // mode='fixed': 固定价格加价
+    // mode='coef': 系数加价（基础价格 × 系数）
+    if (item.mode === 'coef') {
+      return basePrice * item.value;
+    }
+    return item.value;
+  },
+
+  /**
+   * 计算多协议的总加价
+   * 与后端 PricePreviewPanel.jsx 逻辑一致
+   * @param {number} basePrice - 基础价格
+   * @param {Array<string>} selectedProtocols - 选中的协议列表
+   * @param {Object} protocolPricing - 协议定价信息
+   * @returns {number} 协议总加价
+   */
+  calculateTotalProtocolPrice(basePrice, selectedProtocols, protocolPricing) {
+    if (!selectedProtocols || selectedProtocols.length === 0 || !protocolPricing) {
+      return 0;
+    }
+
+    return selectedProtocols.reduce((sum, protocol) => {
+      return sum + this.calculateProtocolPrice(basePrice, protocol, protocolPricing);
+    }, 0);
+  },
+
+  /**
+   * 计算完整的单价（包含协议加价）
+   * 与后端 PricePreviewPanel.jsx 计算公式一致：
+   * unitSubtotal = basePrice + protoAmount + bwAmount + tfAmount + addonsAmount
+   * @param {Object} sku - SKU对象
+   * @param {Array<string>} selectedProtocols - 选中的协议列表
+   * @returns {number} 单价（月价格）
+   */
+  calculateUnitPrice(sku, selectedProtocols = []) {
+    // 基础价格（从 base_price 字段获取，如果不存在则从 pricing 计算）
+    let basePrice = sku.base_price || 0;
+    if (basePrice === 0) {
+      basePrice = this.getSkuPrice(sku);
+    }
+
+    // 协议加价（多协议累加）
+    const protocolAmount = this.calculateTotalProtocolPrice(
+      basePrice,
+      selectedProtocols,
+      sku.protocol_pricing
+    );
+
+    // SKU 规格加价已包含在 getSkuPrice 计算中
+    // 总价 = 基础价格 + 协议加价
+    return basePrice + protocolAmount;
+  },
+
+  /**
    * 获取 SKU 的显示价格（格式化）
    * @param {Object} sku - SKU对象
    * @returns {string} 格式化后的价格字符串

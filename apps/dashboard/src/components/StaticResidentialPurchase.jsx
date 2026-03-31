@@ -1122,7 +1122,10 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
       ip_feature: selectedSku.type || 'static',
       udp_enabled: selectedSku.udp || false,
       traffic_mode: bandwidthMode,
-      traffic_package: selectedSku.traffic || 'unlimited',
+      // 根据计费模式选择正确的套餐值
+      traffic_package: bandwidthMode === 'bandwidth'
+        ? (selectedSku.bandwidth || 'unlimited')
+        : (selectedSku.traffic || 'unlimited'),
       purchase_duration: durationDays,
       quantity: quantity,
       payment_method: actualPaymentMethod,

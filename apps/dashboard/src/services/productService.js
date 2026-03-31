@@ -851,6 +851,185 @@ export const productService = {
     if (price <= 0) return '价格待定';
     return `$${price}/月`;
   },
+
+  // ==================== 场景和业务类型映射 ====================
+
+  /**
+   * 从 scenario 推断 business_type
+   * 根据后端 common/enums/scenario.go 中的映射关系
+   * @param {string} scenario - 场景代码
+   * @returns {string} business_type 代码
+   */
+  inferBusinessTypeFromScenario(scenario) {
+    if (!scenario) return '';
+
+    const scenarioLower = String(scenario).toLowerCase();
+
+    // 电商场景
+    const ecommerceScenarios = ['amazon', 'walmart', 'ebay', 'shopee', 'wish', 'lazada', 'etsy', 'shopify', 'newegg', 'temu', 'rakuten', 'ozon', 'otto'];
+    if (ecommerceScenarios.includes(scenarioLower)) {
+      return 'ecommerce';
+    }
+
+    // 社交场景
+    const socialMediaScenarios = ['facebook', 'tiktok', 'twitter', 'instagram', 'whatsapp', 'linkedin', 'line', 'kakao'];
+    if (socialMediaScenarios.includes(scenarioLower)) {
+      return 'social_media';
+    }
+
+    // 直播场景
+    const liveStreamingScenarios = ['youtube', 'twitch'];
+    if (liveStreamingScenarios.includes(scenarioLower)) {
+      return 'live_streaming';
+    }
+
+    // 游戏场景
+    const gamingScenarios = ['steam', 'roblox', 'nexon', 'nintendo'];
+    if (gamingScenarios.includes(scenarioLower)) {
+      return 'gaming';
+    }
+
+    // 金融场景
+    if (scenarioLower === 'paypal') {
+      return 'financial';
+    }
+
+    // AI场景 (归为E2E测试)
+    if (scenarioLower === 'chatgpt') {
+      return 'e2e_testing';
+    }
+
+    // 运动鞋场景
+    if (['nike', 'adidas'].includes(scenarioLower)) {
+      return 'sneakers';
+    }
+
+    return '';
+  },
+
+  /**
+   * 将 business_type 代码转换为中文名称
+   * @param {string} businessType - 业务类型代码
+   * @returns {string} 中文名称
+   */
+  getBusinessTypeNameCN(businessType) {
+    const nameMap = {
+      'ecommerce': '跨境电商',
+      'social_media': '社交',
+      'advertising': '广告',
+      'live_streaming': '直播',
+      'gaming': '游戏',
+      'sneakers': '运动鞋',
+      'financial': '金融',
+      'e2e_testing': 'E2E测试',
+      'web3': 'Web3',
+      'bot': 'Bot',
+    };
+    return nameMap[businessType] || '';
+  },
+
+  /**
+   * 将 scenario 代码转换为中文名称
+   * @param {string} scenario - 场景代码
+   * @returns {string} 中文名称
+   */
+  getScenarioNameCN(scenario) {
+    if (!scenario) return '';
+
+    const nameMap = {
+      // 电商场景
+      'amazon': '亚马逊',
+      'walmart': '沃尔玛',
+      'ebay': 'eBay',
+      'shopee': 'Shopee',
+      'wish': 'Wish',
+      'lazada': 'Lazada',
+      'etsy': 'Etsy',
+      'shopify': 'Shopify',
+      'newegg': 'Newegg',
+      'temu': 'Temu',
+      'rakuten': '乐天',
+      'ozon': 'Ozon',
+      'otto': 'Otto',
+      // 社交场景
+      'facebook': 'Facebook',
+      'tiktok': 'TikTok',
+      'twitter': 'Twitter',
+      'instagram': 'Instagram',
+      'whatsapp': 'WhatsApp',
+      'linkedin': 'LinkedIn',
+      'line': 'LINE',
+      'kakao': 'Kakao',
+      // 直播场景
+      'youtube': 'YouTube',
+      'twitch': 'Twitch',
+      // 游戏场景
+      'steam': 'Steam',
+      'roblox': 'Roblox',
+      'nexon': 'Nexon',
+      'nintendo': '任天堂',
+      // 金融场景
+      'paypal': 'PayPal',
+      // AI场景
+      'chatgpt': 'ChatGPT',
+      // 运动鞋场景
+      'nike': 'Nike',
+      'adidas': 'Adidas',
+    };
+    return nameMap[scenario.toLowerCase()] || scenario;
+  },
+
+  /**
+   * 将国家代码转换为中文名称
+   * @param {string} countryCode - 国家代码
+   * @returns {string} 中文名称
+   */
+  getCountryNameCN(countryCode) {
+    const nameMap = {
+      'US': '美国',
+      'CN': '中国',
+      'JP': '日本',
+      'GB': '英国',
+      'DE': '德国',
+      'FR': '法国',
+      'CA': '加拿大',
+      'AU': '澳大利亚',
+      'KR': '韩国',
+      'SG': '新加坡',
+      'HK': '香港',
+      'TW': '台湾',
+      'IT': '意大利',
+      'ES': '西班牙',
+      'NL': '荷兰',
+      'IN': '印度',
+      'BR': '巴西',
+      'MX': '墨西哥',
+      'MY': '马来西亚',
+      'TH': '泰国',
+      'ID': '印尼',
+      'PH': '菲律宾',
+      'VN': '越南',
+      'RU': '俄罗斯',
+      'UA': '乌克兰',
+      'KZ': '哈萨克斯坦',
+      'BY': '白俄罗斯',
+      'AT': '奥地利',
+    };
+    return nameMap[countryCode] || countryCode;
+  },
+
+  /**
+   * 生成订单类型标签（国家-业务类型-场景）
+   * @param {Object} order - 订单对象
+   * @returns {string} 格式化后的类型标签
+   */
+  getOrderTypeLabel(order) {
+    const country = this.getCountryNameCN(order.country || order.region || 'US');
+    const businessType = this.inferBusinessTypeFromScenario(order.scenario);
+    const businessTypeName = this.getBusinessTypeNameCN(businessType);
+    const scenarioName = this.getScenarioNameCN(order.scenario);
+    return `${country}-${businessTypeName}-${scenarioName}`;
+  },
 };
 
 export default productService;

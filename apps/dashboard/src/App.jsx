@@ -9,6 +9,7 @@ import StaticResidentialPurchase from './components/StaticResidentialPurchase';
 import BillingCenter from './components/BillingCenter';
 import { orderService } from './services/orderService';
 import { ticketService } from './services/ticketService';
+import productService from './services/productService';
 import ReferralView from './components/ReferralView';
 import MessageCenter from './components/MessageCenter';
 import CouponCenter from './components/CouponCenter';
@@ -1988,7 +1989,7 @@ const OrderListView = ({ onSelectOrder, onExportAll, onNavigateToSupport }) => {
                 order_id: order.order_id || order.id,  // 保存 order_id（字符串）
                 numericId: order.id,  // 保存数字 ID（用于 API 调用）
                 orderNo: order.order_no || order.order_id || order.id,
-                typeLabel: order.product_name || order.template_name || '静态住宅 ISP',
+                typeLabel: productService.getOrderTypeLabel(order),
                 region: order.country || 'US',
                 // 使用状态映射函数计算统一的前端状态
                 status: orderService.computeOrderStatus(order),
@@ -2506,9 +2507,37 @@ const OrderDetailView = ({ order, onBack, onExportOrder, onNavigateToSupport, on
         }
     };
 
-    // Mock data for UI elements not in the main data object
-    const trafficTotal = "1000 GB";
-    const trafficPercentage = 12.5;
+    // 判断订单的计费模式：带宽或流量
+    // 由于后端没有准确记录 billing_mode，使用以下推断逻辑：
+    // 1. 如果 bandwidth 是具体值（如 "10Mbps"），则是带宽套餐
+    // 2. 如果 traffic 是具体值（如 "50GB"），则是流量套餐
+    // 3. 如果都是"不限"，默认显示为流量套餐
+    const bandwidthValue = currentOrder.bandwidth || '不限';
+    const trafficValue = currentOrder.traffic || '不限';
+
+    // 判断是否有具体的带宽值（包含数字或不是"不限"）
+    const hasSpecificBandwidth = bandwidthValue !== '不限' && bandwidthValue !== '' && /\d/.test(bandwidthValue);
+    // 判断是否有具体的流量值（包含数字或不是"不限"）
+    const hasSpecificTraffic = trafficValue !== '不限' && trafficValue !== '' && /\d/.test(trafficValue);
+
+    // 根据推断结果确定计费模式
+    const isBandwidthMode = hasSpecificBandwidth && !hasSpecificTraffic;
+    const isTrafficMode = hasSpecificTraffic || !hasSpecificBandwidth; // 默认流量套餐
+
+    // 根据计费模式显示不同内容
+    const packageLabel = isBandwidthMode ? '带宽套餐' : '流量套餐';
+    const displayLabel = isBandwidthMode ? '带宽规格' : '已用流量';
+
+    // 计算显示值
+    let displayValue;
+    if (isBandwidthMode) {
+      // 带宽套餐：显示带宽值
+      displayValue = bandwidthValue;
+    } else {
+      // 流量套餐：显示已用流量 / 总流量
+      const trafficUsed = currentOrder.trafficUsed || '0';
+      displayValue = `${trafficUsed} / ${trafficValue}`;
+    }
 
     return (
         <div className="space-y-6 animate-in fade-in duration-300 pb-10">
@@ -2615,15 +2644,15 @@ const OrderDetailView = ({ order, onBack, onExportOrder, onNavigateToSupport, on
                      <div className="border border-gray-200 rounded-xl p-5 hover:border-gray-300 transition-colors">
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="font-bold text-gray-800 flex items-center gap-2"><Signal className="w-4 h-4 text-emerald-500"/> 流量与带宽</h3>
-                            <button className="text-xs text-blue-600 hover:underline">查看报表</button>
+                            <span className="text-[10px] text-gray-500 bg-gray-50 border border-gray-200 px-2 py-0.5 rounded">{packageLabel}</span>
                         </div>
                         <div className="mb-4">
                             <div className="flex justify-between text-sm mb-1">
-                                <span className="text-gray-500">已用流量</span>
-                                <span className="font-mono font-bold text-gray-900">{currentOrder.trafficUsed || '0'} / {trafficTotal}</span>
+                                <span className="text-gray-500">{displayLabel}</span>
+                                <span className="font-mono font-bold text-gray-900">{displayValue}</span>
                             </div>
                             <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                                <div className="h-full bg-emerald-500 rounded-full" style={{width: `${trafficPercentage}%`}}></div>
+                                <div className="h-full bg-emerald-500 rounded-full" style={{width: `${12.5}%`}}></div>
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-3 mt-6">
@@ -3305,7 +3334,7 @@ const SupportView = ({ initialDraft, onClearDraft }) => {
                               <optgroup label="单笔订单">
                                 {orders.map(order => (
                                   <option key={order.order_id} value={order.order_id}>
-                                    {order.order_id} - {order.country} [{order.template_name || order.resource_type}]
+                                    {order.order_id} - {productService.getOrderTypeLabel(order)}
                                   </option>
                                 ))}
                               </optgroup>
@@ -4149,7 +4178,7 @@ const App = () => {
               // 保存数字 ID（用于余额支付跳转）
               numericId: order.id,
               orderNo: order.order_no || order.order_id || order.id,
-              typeLabel: order.template_name || order.resource_type || '静态住宅代理',
+              typeLabel: productService.getOrderTypeLabel(order),
               region: order.country || order.region || 'Unknown',
               // 使用计算后的前端状态
               status: frontendStatus,

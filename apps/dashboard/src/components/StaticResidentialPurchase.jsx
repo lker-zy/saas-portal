@@ -549,6 +549,9 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
 
   const [selectedSku, setSelectedSku] = useState(null);
   const [showRestockModal, setShowRestockModal] = useState(false);
+
+  // 用于跟踪场景是否真正变化，避免协议变化时误清空 SKU
+  const prevScenariosRef = useRef(null);
   
   // Payment state
   const [paymentMethod, setPaymentMethod] = useState('stripe');
@@ -965,9 +968,20 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
   // Effects
   useEffect(() => {
     const lastScenario = selectedScenarios[selectedScenarios.length - 1];
-    if (lastScenario?.recommend?.bandwidthMode) {
-      if (!userOverrideMode) { setBandwidthMode(lastScenario.recommend.bandwidthMode); setSelectedSku(null); }
+
+    // 检查场景是否真正变化（通过比较场景ID）
+    const scenariosChanged = prevScenariosRef.current !== JSON.stringify(selectedScenarios.map(s => s.id));
+
+    // 只在场景真正变化时才更新 bandwidthMode 和清空 SKU
+    if (scenariosChanged && lastScenario?.recommend?.bandwidthMode) {
+      if (!userOverrideMode) {
+        setBandwidthMode(lastScenario.recommend.bandwidthMode);
+        setSelectedSku(null);
+      }
+      // 更新 ref
+      prevScenariosRef.current = JSON.stringify(selectedScenarios.map(s => s.id));
     }
+
     if (lastScenario || selectedTerminal) {
       // 使用 productService 获取推荐协议
       const recProto = productService.getRecommendedProtocolForTerminal(selectedTerminal, availableProtocols);

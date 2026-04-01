@@ -811,6 +811,50 @@ export const orderService = {
       };
     }
   },
+
+  /**
+   * 关闭订单
+   * @param {number} orderId - 订单ID
+   * @param {Object} options - 关闭选项
+   * @param {string} options.closeType - 关闭类型: cancel(用户取消), close(到期关闭/违规关闭)
+   * @param {string} options.closeReason - 关闭原因
+   * @param {boolean} options.forceClose - 是否强制关闭（跳过状态检查）
+   * @returns {Promise} 关闭结果
+   */
+  async closeOrder(orderId, options = {}) {
+    try {
+      const response = await orderAPI.closeOrder(orderId, options);
+
+      if (response.code === 200 || response.code === 0) {
+        return {
+          success: true,
+          message: response.message || '订单已关闭',
+          data: response.data,
+        };
+      } else {
+        return {
+          success: false,
+          message: response.message || '关闭订单失败',
+        };
+      }
+    } catch (error) {
+      console.error('Close order service error:', error);
+      return {
+        success: false,
+        message: error.message || '关闭订单失败，请稍后重试',
+      };
+    }
+  },
+
+  /**
+   * 检查订单是否可以关闭
+   * @param {Object} order - 订单对象
+   * @returns {boolean} 是否可以关闭
+   */
+  canCloseOrder(order) {
+    const status = this.computeOrderStatus(order);
+    return ['active', 'deploying', 'failed'].includes(status);
+  },
 };
 
 export default orderService;

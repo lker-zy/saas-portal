@@ -199,6 +199,29 @@ export const orderAPI = {
       subscription_id: subscriptionId,
     });
   },
+
+  // ==================== 订单关闭 ====================
+
+  /**
+   * 关闭订单
+   * @param {number} orderId - 订单ID
+   * @param {Object} options - 关闭选项
+   * @param {string} options.closeType - 关闭类型: cancel(用户取消), close(到期关闭/违规关闭)
+   * @param {string} options.closeReason - 关闭原因
+   * @param {boolean} options.forceClose - 是否强制关闭（跳过状态检查）
+   * @returns {Promise} { success, message, order_id, previous_status, new_status, deleted_proxy_nodes, released_ips, affected_nodes, config_version }
+   */
+  closeOrder: (orderId, options = {}) => {
+    const numericOrderId = typeof orderId === 'string' ? parseInt(orderId) : orderId;
+    console.log('[orderAPI.closeOrder] orderId:', orderId, '-> numericOrderId:', numericOrderId, 'options:', options);
+
+    return axios.post('/order/internal/close', {
+      order_id: numericOrderId,
+      close_type: options.closeType || 'close',
+      close_reason: options.closeReason || 'user_request',
+      force_close: options.forceClose || false,
+    });
+  },
 };
 
 export default orderAPI;

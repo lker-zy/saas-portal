@@ -2507,6 +2507,79 @@ const OrderDetailView = ({ order, onBack, onExportOrder, onNavigateToSupport, on
         }
     };
 
+    // 关闭订单
+    const handleCloseOrder = async () => {
+        // 检查订单状态是否允许关闭
+        if (!orderService.canCloseOrder(currentOrder)) {
+            alert(`当前订单状态为「${orderService.formatOrderStatus(currentOrder.status)}」，无法关闭`);
+            return;
+        }
+
+        // 确认对话框
+        const confirmMessage = '确定要关闭此订单吗？\n\n关闭后将停止计费并释放相关资源，此操作不可撤销。';
+        if (!window.confirm(confirmMessage)) {
+            return;
+        }
+
+        // 再次确认
+        if (!window.confirm('请再次确认：订单关闭后无法恢复，是否继续？')) {
+            return;
+        }
+
+        setIsToggling(true);
+
+        try {
+            // 获取数字类型的订单ID
+            const orderId = currentOrder.numericId || (typeof currentOrder.id === 'number' ? currentOrder.id : parseInt(currentOrder.id));
+
+            console.log('[CloseOrder] Current order:', currentOrder);
+            console.log('[CloseOrder] Using orderId:', orderId, 'Type:', typeof orderId);
+
+            if (!orderId || isNaN(orderId)) {
+                alert('订单ID无效，请刷新页面重试');
+                return;
+            }
+
+            // 调用关闭订单API
+            const result = await orderService.closeOrder(orderId, {
+                closeType: 'cancel', // 用户主动取消
+                closeReason: 'user_request', // 用户主动请求
+                forceClose: false,
+            });
+
+            console.log('[CloseOrder] API result:', result);
+
+            if (result.success) {
+                // 更新本地订单状态为已取消
+                const updatedOrder = {
+                    ...currentOrder,
+                    status: 'cancelled',
+                    orderStatus: 'cancelled',
+                };
+                setCurrentOrder(updatedOrder);
+
+                alert(`订单已关闭\n\n已删除 ${result.data?.deleted_proxy_nodes || 0} 个代理节点\n已释放 ${result.data?.released_ips || 0} 个IP地址`);
+
+                // 通知父组件更新订单列表
+                if (onOrderUpdate) {
+                    onOrderUpdate(updatedOrder);
+                }
+
+                // 自动返回订单列表
+                setTimeout(() => {
+                    onBack();
+                }, 1500);
+            } else {
+                alert(result.message || '关闭订单失败，请稍后重试');
+            }
+        } catch (error) {
+            console.error('Close order error:', error);
+            alert('关闭订单失败：' + (error.message || '网络错误'));
+        } finally {
+            setIsToggling(false);
+        }
+    };
+
     // 判断订单的计费模式：带宽或流量
     // 由于后端没有准确记录 billing_mode，使用以下推断逻辑：
     // 1. 如果 bandwidth 是具体值（如 "10Mbps"），则是带宽套餐
@@ -2570,6 +2643,21 @@ const OrderDetailView = ({ order, onBack, onExportOrder, onNavigateToSupport, on
                          </div>
                      </div>
                      <div className="flex gap-3 w-full md:w-auto">
+                        {/* 关闭订单按钮 - 仅在可关闭状态下显示 */}
+                        {orderService.canCloseOrder(currentOrder.status) && (
+                            <button
+                                onClick={handleCloseOrder}
+                                disabled={isToggling}
+                                className={`flex-1 md:flex-none px-5 py-2.5 text-sm font-bold rounded-lg flex items-center justify-center gap-2 transition-all ${
+                                    isToggling
+                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                        : 'bg-red-600 text-white hover:bg-red-700 shadow-lg shadow-red-200'
+                                }`}
+                                title={`关闭订单（状态：${orderService.formatOrderStatus(currentOrder.status)}）`}
+                            >
+                                <XCircle className="w-4 h-4"/> {isToggling ? '处理中...' : '关闭订单'}
+                            </button>
+                        )}
                         <button
                             onClick={onExportOrder}
                             disabled={!orderService.canExtractProxies(currentOrder.status)}

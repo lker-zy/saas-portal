@@ -1486,7 +1486,6 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
                 {/* Left Sidebar */}
                 <div className="w-28 shrink-0 bg-[#F8F9FB] flex flex-col">
                   {businessCategories && businessCategories.length > 0 && businessCategories
-                    .filter(cat => cat.scenarios && cat.scenarios.some(sc => sc.enabled === true)) // 只显示有库存场景的业务类别
                     .map(cat => {
                       const isActive = viewCategory && viewCategory.id === cat.id;
                       return (

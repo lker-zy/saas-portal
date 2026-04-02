@@ -10,6 +10,7 @@ import BillingCenter from './components/BillingCenter';
 import { orderService } from './services/orderService';
 import { ticketService } from './services/ticketService';
 import productService from './services/productService';
+import { paymentService, BALANCE_PAYMENT_CONFIG } from './services/paymentService';
 import ReferralView from './components/ReferralView';
 import MessageCenter from './components/MessageCenter';
 import CouponCenter from './components/CouponCenter';
@@ -95,6 +96,7 @@ import {
   Paperclip,
   Send,
   MessageCircle,
+  Wallet,
   AlertTriangle,
   CheckCircle,
   XCircle,
@@ -109,6 +111,7 @@ import {
   TrendingUp,
   Home,
   Loader2,
+  DollarSign,
 } from 'lucide-react';
 
 // --- 1. Basic Tools & Data ---
@@ -2432,6 +2435,36 @@ const OrderDetailView = ({ order, onBack, onExportOrder, onNavigateToSupport, on
     // 订单状态
     const [currentOrder, setCurrentOrder] = useState(order);
     const [isToggling, setIsToggling] = useState(false);
+    const [isPaying, setIsPaying] = useState(false);
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('stripe:card'); // 默认选中Stripe银行卡
+    const [useBalance, setUseBalance] = useState(false); // 是否使用余额支付
+
+    // 支付方式列表（Stripe支付方式）
+    const STRIPE_PAYMENT_METHODS = [
+        {
+            id: 'stripe:card',
+            name: '银行卡',
+            icon: <CreditCard className="w-5 h-5 text-[#1A73E8]" />
+        },
+        {
+            id: 'stripe:alipay',
+            name: '支付宝',
+            icon: <Smartphone className="w-5 h-5 text-[#1677FF]" />
+        },
+        {
+            id: 'stripe:wechat',
+            name: '微信支付',
+            icon: <MessageCircle className="w-5 h-5 text-[#07C160]" />
+        },
+        {
+            id: 'usdt',
+            name: 'USDT',
+            icon: <DollarSign className="w-5 h-5 text-[#26A17B]" />,
+            disabled: true, // 暂时禁用
+            disabledReason: '暂时维护中'
+        }
+    ];
 
     // 当 order prop 变化时更新 currentOrder
     useEffect(() => {
@@ -2581,6 +2614,89 @@ const OrderDetailView = ({ order, onBack, onExportOrder, onNavigateToSupport, on
         }
     };
 
+    // 显示支付方式选择对话框
+    const handlePayOrder = () => {
+        setSelectedPaymentMethod('stripe:card'); // 重置为默认值
+        setUseBalance(false); // 重置余额支付选项
+        setShowPaymentModal(true);
+    };
+
+    // 执行支付
+    const executePayment = async () => {
+        setIsPaying(true);
+        setShowPaymentModal(false);
+        try {
+            // 获取数字类型的订单ID
+            const orderId = currentOrder.numericId || (typeof currentOrder.id === 'number' ? currentOrder.id : parseInt(currentOrder.id));
+
+            // 根据是否使用余额来决定支付方式
+            const actualPaymentMethod = useBalance ? 'balance' : selectedPaymentMethod;
+            console.log('[PayOrder] Paying order:', orderId, 'useBalance:', useBalance, 'actualPaymentMethod:', actualPaymentMethod);
+
+            if (!orderId || isNaN(orderId)) {
+                alert('订单ID无效，无法支付');
+                return;
+            }
+
+            // 保存来源信息，用于 cancel_url 回调
+            sessionStorage.setItem('payment_source', 'order_detail');
+            sessionStorage.setItem('payment_return_order_id', orderId);
+
+            // 构建 cancel_url 和 success_url
+            const cancelUrl = `${window.location.origin}/payment/cancel`;
+            const successUrl = `${window.location.origin}/payment/success`;
+
+            // 调用支付 API，传递 cancel_url 和 success_url
+            const result = await orderService.payOrder(orderId, actualPaymentMethod, {
+                cancel_url: cancelUrl,
+                success_url: successUrl,
+            });
+
+            if (result.success) {
+                // 处理 Stripe 支付的跳转
+                if (actualPaymentMethod.startsWith('stripe') && result.data?.checkout_url) {
+                    // 保存待支付订单ID
+                    sessionStorage.setItem('pending_order_id', orderId);
+
+                    // 跳转到 Stripe 支付页面
+                    window.location.href = result.data.checkout_url;
+                    return;
+                }
+
+                // 余额支付成功
+                const updatedOrder = {
+                    ...currentOrder,
+                    status: 'deploying', // 支付后进入部署中状态
+                    payStatus: 'paid',
+                    payTime: new Date().toISOString(),
+                };
+                setCurrentOrder(updatedOrder);
+
+                // 刷新余额
+                await window.balanceService?.getBalance?.();
+
+                alert('支付成功！订单正在部署中，请稍候...');
+
+                // 通知父组件更新订单列表
+                if (onOrderUpdate) {
+                    onOrderUpdate(updatedOrder);
+                }
+
+                // 3秒后自动返回订单列表
+                setTimeout(() => {
+                    onBack();
+                }, 3000);
+            } else {
+                alert(result.message || '支付失败，请稍后重试');
+            }
+        } catch (error) {
+            console.error('Pay order error:', error);
+            alert('支付失败：' + (error.message || '网络错误'));
+        } finally {
+            setIsPaying(false);
+        }
+    };
+
     // 判断订单的计费模式：带宽或流量
     // 由于后端没有准确记录 billing_mode，使用以下推断逻辑：
     // 1. 如果 bandwidth 是具体值（如 "10Mbps"），则是带宽套餐
@@ -2614,6 +2730,7 @@ const OrderDetailView = ({ order, onBack, onExportOrder, onNavigateToSupport, on
     }
 
     return (
+        <>
         <div className="space-y-6 animate-in fade-in duration-300 pb-10">
              {/* Top Navigation */}
              <div>
@@ -2644,6 +2761,20 @@ const OrderDetailView = ({ order, onBack, onExportOrder, onNavigateToSupport, on
                          </div>
                      </div>
                      <div className="flex gap-3 w-full md:w-auto">
+                        {/* 支付订单按钮 - 仅在待支付状态下显示 */}
+                        {currentOrder.status === 'pending' && (
+                            <button
+                                onClick={handlePayOrder}
+                                disabled={isPaying}
+                                className={`flex-1 md:flex-none px-5 py-2.5 text-sm font-bold rounded-lg flex items-center justify-center gap-2 transition-all ${
+                                    isPaying
+                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                        : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-lg shadow-emerald-200'
+                                }`}
+                            >
+                                <CreditCard className="w-4 h-4"/> {isPaying ? '支付中...' : '立即支付'}
+                            </button>
+                        )}
                         {/* 关闭订单按钮 - 仅在可关闭状态下显示 */}
                         {orderService.canCloseOrder(currentOrder.status) && (
                             <button
@@ -2850,6 +2981,134 @@ const OrderDetailView = ({ order, onBack, onExportOrder, onNavigateToSupport, on
                  </div>
              </div>
         </div>
+
+        {/* Payment Method Selection Modal */}
+        {showPaymentModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+                <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+                    {/* Header */}
+                    <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                        <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                            <CreditCard className="w-5 h-5 text-emerald-600" />
+                            选择支付方式
+                        </h3>
+                        <button
+                            onClick={() => setShowPaymentModal(false)}
+                            className="text-gray-400 hover:text-gray-600 transition-colors"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
+
+                    {/* Content */}
+                    <div className="p-6 space-y-4">
+                        {/* Order Amount */}
+                        <div className="bg-gradient-to-r from-emerald-50 to-blue-50 rounded-xl p-4 mb-6">
+                            <div className="text-sm text-gray-600 mb-1">订单金额</div>
+                            <div className="text-3xl font-bold text-gray-900">¥{currentOrder.amount || '0.00'}</div>
+                        </div>
+
+                        {/* Payment Methods */}
+                        <div className="space-y-4">
+                            {/* Stripe Payment Methods - Card Grid */}
+                            <div className="grid grid-cols-4 gap-3">
+                                {STRIPE_PAYMENT_METHODS.map(method => {
+                                    const isSelected = selectedPaymentMethod === method.id;
+                                    const isDisabled = method.disabled || isPaying;
+                                    return (
+                                        <button
+                                            key={method.id}
+                                            onClick={() => !isDisabled && setSelectedPaymentMethod(method.id)}
+                                            disabled={isDisabled}
+                                            className={`
+                                                relative flex flex-col items-start justify-center gap-1.5 py-3 px-4 rounded-xl border transition-all duration-200
+                                                ${method.disabled
+                                                    ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed opacity-60'
+                                                    : isSelected
+                                                        ? 'border-[#1A73E8] bg-blue-50/50 text-blue-600 shadow-sm ring-1 ring-blue-500/20'
+                                                        : 'border-gray-200 hover:border-gray-300 bg-white text-gray-600 hover:bg-gray-50/50'
+                                                }
+                                            `}
+                                            title={method.disabledReason || ''}
+                                        >
+                                            <div className={`transition-transform duration-200 ${isSelected && !method.disabled ? 'scale-105' : ''} scale-75 origin-left ${method.disabled ? 'grayscale opacity-50' : ''}`}>
+                                                {method.icon}
+                                            </div>
+                                            <span className="text-[13px] font-medium tracking-wide">
+                                                {method.name}
+                                            </span>
+                                            {method.disabled && (
+                                                <div className="absolute top-1.5 right-1.5">
+                                                    <div className="w-3 h-3 bg-gray-400 rounded-full" title={method.disabledReason || '暂时不可用'} />
+                                                </div>
+                                            )}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Balance Payment - Independent Option */}
+                            <div className={`p-4 rounded-xl border-2 transition-all cursor-pointer ${useBalance ? 'border-[#10B981] bg-emerald-50' : 'border-gray-200 hover:border-gray-300'}`}
+                                onClick={() => setUseBalance(!useBalance)}>
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center transition-colors ${useBalance ? 'bg-emerald-100' : 'bg-gray-100'}`}>
+                                        <Wallet className={`w-6 h-6 ${useBalance ? 'text-emerald-600' : 'text-gray-500'}`} />
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className={`font-semibold ${useBalance ? 'text-emerald-700' : 'text-gray-900'}`}>余额支付</div>
+                                        <div className="text-sm text-gray-500">使用账户余额快速支付</div>
+                                    </div>
+                                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${useBalance ? 'border-emerald-500 bg-emerald-500' : 'border-gray-300'}`}>
+                                        {useBalance && <Check className="w-4 h-4 text-white" />}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Confirm Button */}
+                        <button
+                            onClick={executePayment}
+                            disabled={isPaying}
+                            className={`
+                                w-full py-3 rounded-xl font-semibold text-sm transition-all
+                                ${isPaying
+                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    : useBalance
+                                        ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-lg'
+                                        : 'bg-gradient-to-r from-[#1A73E8] to-blue-600 text-white hover:from-blue-700 hover:to-blue-700 shadow-lg'
+                                }
+                            `}
+                        >
+                            {isPaying ? '支付中...' : useBalance ? `余额支付 ¥${currentOrder.amount || '0.00'}` : `确认支付 ¥${currentOrder.amount || '0.00'}`}
+                        </button>
+
+                        {/* Notice */}
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex gap-3">
+                            <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                            <div className="text-sm text-amber-800">
+                                <p className="font-bold mb-1">支付说明</p>
+                                <ul className="space-y-1 text-amber-700/80">
+                                    <li>• 余额支付将直接扣除账户余额</li>
+                                    <li>• Stripe 支付将跳转到安全支付页面</li>
+                                    <li>• 支付成功后订单将自动开始部署</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Footer */}
+                    <div className="px-6 py-3 border-t border-gray-100">
+                        <button
+                            onClick={() => setShowPaymentModal(false)}
+                            className="w-full text-center text-gray-500 text-sm font-medium hover:text-gray-700 transition-colors"
+                        >
+                            取消
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+        </>
     );
 };
 

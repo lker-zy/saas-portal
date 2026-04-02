@@ -35,7 +35,9 @@ const PAYMENT_METHODS = [
     iconType: 'usdt',
     brandColor: '#26A17B',
     bgActive: 'border-emerald-400 bg-emerald-50/50 ring-2 ring-emerald-100',
-    description: '稳定币 · 去中心化支付'
+    description: '稳定币 · 去中心化支付',
+    disabled: true, // 暂时禁用
+    disabledReason: '暂时维护中'
   },
 ];
 

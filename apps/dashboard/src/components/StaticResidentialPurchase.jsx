@@ -2023,21 +2023,32 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
                 <div className="grid grid-cols-4 gap-3 mb-6">
                   {PAYMENT_METHODS.map(method => {
                     const isActive = paymentMethod === method.id;
+                    const isDisabled = method.disabled;
                     return (
-                      <button key={method.id}
-                        onClick={() => setPaymentMethod(method.id)}
+                      <button
+                        key={method.id}
+                        onClick={() => !isDisabled && setPaymentMethod(method.id)}
+                        disabled={isDisabled}
                         className={`relative flex flex-col items-start justify-center gap-1.5 py-2.5 pl-3 rounded-xl border transition-all duration-200 ${
-                          isActive
-                            ? 'border-[#1A73E8] bg-blue-50/50 text-blue-600 shadow-sm ring-1 ring-blue-500/20'
-                            : 'border-gray-200 hover:border-gray-300 bg-white text-gray-600 hover:bg-gray-50/50'
+                          isDisabled
+                            ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed opacity-60'
+                            : isActive
+                              ? 'border-[#1A73E8] bg-blue-50/50 text-blue-600 shadow-sm ring-1 ring-blue-500/20'
+                              : 'border-gray-200 hover:border-gray-300 bg-white text-gray-600 hover:bg-gray-50/50'
                         }`}
+                        title={method.disabledReason || ''}
                       >
-                        <div className={`transition-transform duration-200 ${isActive ? 'scale-105' : ''} scale-75 origin-left`}>
+                        <div className={`transition-transform duration-200 ${isActive && !isDisabled ? 'scale-105' : ''} scale-75 origin-left ${isDisabled ? 'grayscale opacity-50' : ''}`}>
                           {method.icon}
                         </div>
                         <span className="text-[13px] font-medium tracking-wide">
                           {method.name}
                         </span>
+                        {isDisabled && (
+                          <div className="absolute top-1.5 right-1.5">
+                            <div className="w-3 h-3 bg-gray-400 rounded-full" title={method.disabledReason || '暂时不可用'} />
+                          </div>
+                        )}
                       </button>
                     );
                   })}

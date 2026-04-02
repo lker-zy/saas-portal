@@ -46,7 +46,21 @@ export const usePurchaseFlow = () => {
       let payResult = createResult.data.payment;
       if (!isPaymentHandled) {
         console.log('Paying order:', orderId, 'with method:', paymentMethod);
-        const payResponse = await orderService.payOrder(orderId, paymentMethod);
+
+        // 构建 cancel_url 和 success_url（用于 Stripe 支付回调）
+        const cancelUrl = `${window.location.origin}/payment/cancel`;
+        const successUrl = `${window.location.origin}/payment/success`;
+
+        // 保存来源信息，用于支付取消后返回
+        const currentUrl = new URL(window.location.href);
+        const currentTab = currentUrl.searchParams.get('tab') || 'buy_static_isp';
+        sessionStorage.setItem('stripe_return_tab', currentTab);
+        sessionStorage.setItem('payment_source', 'purchase');
+
+        const payResponse = await orderService.payOrder(orderId, paymentMethod, {
+          cancel_url: cancelUrl,
+          success_url: successUrl,
+        });
 
         if (!payResponse.success) {
           setError(payResponse.message || '支付失败');
@@ -63,11 +77,6 @@ export const usePurchaseFlow = () => {
           // 保存订单信息用于支付成功后验证
           sessionStorage.setItem('pending_order_id', orderId);
           sessionStorage.setItem('pending_order_no', createResult.data.order_no);
-
-          // 保存来源页面信息，用于支付取消后返回
-          const currentUrl = new URL(window.location.href);
-          const currentTab = currentUrl.searchParams.get('tab') || 'buy_static_isp';
-          sessionStorage.setItem('stripe_return_tab', currentTab);
 
           // 直接跳转到 Stripe Checkout
           window.location.href = payResult.checkout_url;

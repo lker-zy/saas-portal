@@ -105,11 +105,14 @@ export const orderService = {
    * 支付订单
    * @param {number} orderId - 订单ID
    * @param {string} paymentMethod - 支付方式 (balance, alipay, wechat)
+   * @param {Object} options - 支付选项
+   * @param {string} options.cancel_url - 取消支付时的回调URL
+   * @param {string} options.success_url - 支付成功时的回调URL
    * @returns {Promise} 支付结果
    */
-  async payOrder(orderId, paymentMethod) {
+  async payOrder(orderId, paymentMethod, options = {}) {
     try {
-      const response = await orderAPI.payOrder(orderId, paymentMethod);
+      const response = await orderAPI.payOrder(orderId, paymentMethod, options);
 
       if (response.code === 200 || response.code === 0) {
         // 支付成功后刷新余额

@@ -47,12 +47,17 @@ export const orderAPI = {
    * 支付订单
    * @param {number} orderId - 订单ID
    * @param {string} paymentMethod - 支付方式（balance, alipay, wechat等）
+   * @param {Object} options - 支付选项
+   * @param {string} options.cancel_url - 取消支付时的回调URL
+   * @param {string} options.success_url - 支付成功时的回调URL
    * @returns {Promise} { success: boolean, message: string, balance: number }
    */
-  payOrder: (orderId, paymentMethod) =>
+  payOrder: (orderId, paymentMethod, options = {}) =>
     axios.post('/order/internal/pay', {
       order_id: orderId,
       payment_method: paymentMethod,
+      cancel_url: options.cancel_url,
+      success_url: options.success_url,
     }),
 
   /**

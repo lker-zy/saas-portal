@@ -6,15 +6,61 @@ import { XCircle, Home, RotateCcw } from 'lucide-react';
  */
 export const StripePaymentCancel = () => {
   const handleReturnToDashboard = () => {
-    // 返回到 dashboard 的购买页面
-    const returnTab = sessionStorage.getItem('stripe_return_tab') || 'buy_static_isp';
-    window.location.href = `/dashboard?tab=${returnTab}`;
+    // 检查是否从订单详情页发起的支付
+    const paymentSource = sessionStorage.getItem('payment_source');
+    const returnOrderId = sessionStorage.getItem('payment_return_order_id');
+
+    console.log('[StripePaymentCancel] paymentSource:', paymentSource);
+    console.log('[StripePaymentCancel] returnOrderId:', returnOrderId);
+
+    if (paymentSource === 'order_detail' && returnOrderId) {
+      // 从订单详情页发起的支付，返回订单详情页
+      console.log('[StripePaymentCancel] 返回订单详情页, orderId:', returnOrderId);
+      window.location.href = `/dashboard?tab=orders&orderId=${returnOrderId}`;
+    } else if (paymentSource === 'purchase') {
+      // 从购买页发起的支付，返回对应的购买页面
+      const returnTab = sessionStorage.getItem('stripe_return_tab') || 'buy_static_isp';
+      console.log('[StripePaymentCancel] 返回购买页, tab:', returnTab);
+      // 判断是否是 portal 的购买页（purchase tab）还是 dashboard 的购买页
+      if (returnTab === 'purchase') {
+        window.location.href = `/?tab=purchase`;
+      } else {
+        window.location.href = `/dashboard?tab=${returnTab}`;
+      }
+    } else {
+      // 默认返回到 dashboard 的购买页面
+      const returnTab = sessionStorage.getItem('stripe_return_tab') || 'buy_static_isp';
+      console.log('[StripePaymentCancel] 返回购买页, tab:', returnTab);
+      window.location.href = `/dashboard?tab=${returnTab}`;
+    }
   };
 
   const handleRetry = () => {
-    // 返回到 dashboard 的购买页面重新支付
-    const returnTab = sessionStorage.getItem('stripe_return_tab') || 'buy_static_isp';
-    window.location.href = `/dashboard?tab=${returnTab}`;
+    // 检查是否从订单详情页发起的支付
+    const paymentSource = sessionStorage.getItem('payment_source');
+    const returnOrderId = sessionStorage.getItem('payment_return_order_id');
+    const type = sessionStorage.getItem('stripe_type');
+
+    console.log('[StripePaymentCancel] handleRetry - paymentSource:', paymentSource);
+
+    if (paymentSource === 'order_detail' && returnOrderId) {
+      // 从订单详情页发起的支付，返回订单详情页
+      window.location.href = `/dashboard?tab=orders&orderId=${returnOrderId}`;
+    } else if (paymentSource === 'purchase') {
+      // 从购买页发起的支付，返回对应的购买页面
+      const returnTab = sessionStorage.getItem('stripe_return_tab') || 'buy_static_isp';
+      if (returnTab === 'purchase') {
+        window.location.href = `/?tab=purchase`;
+      } else {
+        window.location.href = `/dashboard?tab=${returnTab}`;
+      }
+    } else if (type === 'recharge') {
+      window.location.href = '/?tab=finance';
+    } else {
+      // 返回到 dashboard 的购买页面重新支付
+      const returnTab = sessionStorage.getItem('stripe_return_tab') || 'buy_static_isp';
+      window.location.href = `/dashboard?tab=${returnTab}`;
+    }
   };
 
   return (
@@ -68,14 +114,14 @@ export const StripePaymentCancel = () => {
               }}
             >
               <RotateCcw className="w-4 h-4" />
-              <span>重新支付</span>
+              <span>继续支付</span>
             </button>
             <button
               onClick={handleReturnToDashboard}
               className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 border border-gray-300 font-semibold rounded-xl transition-all"
             >
               <Home className="w-4 h-4" />
-              <span>返回购买页</span>
+              <span>返回</span>
             </button>
           </div>
         </div>

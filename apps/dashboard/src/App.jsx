@@ -97,6 +97,7 @@ import {
   MessageCircle,
   AlertTriangle,
   CheckCircle,
+  XCircle,
   MoreVertical,
   Info,
   ExternalLink,

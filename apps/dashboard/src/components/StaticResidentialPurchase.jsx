@@ -1510,17 +1510,21 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
 
                 {/* Right Content */}
                 <div className="flex-1 p-5 overflow-y-auto">
-                  {viewCategory && viewCategory.scenarios && viewCategory.scenarios.filter(sc => sc.enabled === true).length > 0 ? (
+                  {viewCategory && viewCategory.scenarios && viewCategory.scenarios.length > 0 ? (
                     <div className="grid grid-cols-3 gap-3">
                       {viewCategory.scenarios
-                        .filter(sc => sc.enabled === true) // 只显示有库存的场景
                         .map(sc => {
                          const isActive = selectedScenarios.length > 0 && selectedScenarios[0].id === sc.id;
                          const stockStatus = getScenarioStockStatus(sc.stock || 0);
+                         const isOutOfStock = stockStatus.isOutOfStock;
+
                          return (
                           <button
                             key={sc.id}
                             onClick={() => {
+                              // 售罄的场景不可点击
+                              if (isOutOfStock) return;
+
                               // 单选模式：直接替换为当前选中的场景
                               const newSelection = [{ ...sc, categoryId: viewCategory.id, categoryName: viewCategory.name }];
                               setSelectedScenarios(newSelection);
@@ -1530,7 +1534,9 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
                             className={`relative flex items-center justify-between px-3 py-2.5 rounded-xl border transition-all duration-200 ease-in-out group bg-white active:scale-[0.98] ${
                               isActive
                                 ? 'border-[#1A73E8] shadow-sm ring-1 ring-[#1A73E8] ring-opacity-50'
-                                : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                                : isOutOfStock
+                                  ? 'border-gray-100 bg-gray-50 cursor-not-allowed opacity-60'
+                                  : 'border-gray-200 hover:border-gray-300 hover:shadow-sm cursor-pointer'
                             }`}
                           >
                             <div className="flex items-center gap-2">
@@ -1548,11 +1554,11 @@ const StaticResidentialPurchase = ({ onOpenPurchaseGuide }) => {
                               <span className="text-[12px] font-bold text-gray-900" title={sc.name}>{sc.name}</span>
                             </div>
                             <span className={`text-[11px] font-medium whitespace-nowrap ${
-                              stockStatus.isOutOfStock ? 'text-red-500' :
-                              stockStatus.isLowStock ? 'text-amber-600' :
-                              'text-emerald-600'
+                              isOutOfStock ? 'text-red-500 bg-red-50 px-2 py-0.5 rounded' :
+                              stockStatus.isLowStock ? 'text-amber-600 bg-amber-50 px-2 py-0.5 rounded' :
+                              'text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded'
                             }`}>
-                              {stockStatus.label}
+                              {isOutOfStock ? '售罄' : stockStatus.label}
                             </span>
                             {isActive && (
                               <div className="absolute top-0 right-0 w-0 h-0 border-t-[12px] border-r-[12px] border-t-[#1A73E8] border-r-[#1A73E8] rounded-bl-lg rounded-tr-lg">
